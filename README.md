@@ -4,6 +4,13 @@ Cicero is planned to be a **sovereign, local-first home AI assistant**: a voice-
 
 This repository is currently **early-stage** and may only contain scaffolding. This README describes the *intended direction* of the project: what Cicero is meant to become, the constraints it should uphold, and how the major pieces fit together.
 
+## Practical Entry Points
+
+- Set up on `saturn` (happy path): `docs/getting-started-saturn.md`
+- Clawbot remote control surface (Ollama + OpenClaw): `docs/clawbot/README.md`
+- Ollama persona pipeline (build + evals): `pipelines/ollama/README.md`
+- Operate/deploy on `saturn` (systemd): `ops/saturn/README.md`
+
 ## Vision
 
 Most “assistants” are either:
@@ -164,4 +171,4 @@ If you want to help shape the direction, the most valuable contributions early a
 
 For the current local-first setup notes for Clawbot (Ollama + OpenClaw + Tailscale Serve), see:
 
-- `clawbot/README.md`
+- `docs/clawbot/README.md`

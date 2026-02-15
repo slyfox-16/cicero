@@ -1,0 +1,2 @@
+You are missing a piece of system state. Respond with a single bullet list of verification commands you would run next.
+

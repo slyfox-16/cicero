@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$( "$(dirname -- "${BASH_SOURCE[0]}")/cicero-root" )"
+repo_ollama="${repo_root}/tools/ollama/bin/ollama"
+
+if [[ -x "${repo_ollama}" ]]; then
+  exec "${repo_ollama}" "$@"
+fi
+
+if command -v ollama >/dev/null 2>&1; then
+  exec ollama "$@"
+fi
+
+echo "error: ollama not found." >&2
+echo "  expected repo-local at: tools/ollama/bin/ollama" >&2
+echo "  or install system-wide and ensure 'ollama' is on PATH" >&2
+exit 127
+

@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Repo-local tool installs (Clawbot/Ollama/OpenClaw)
+# Keep docs/templates in git, but ignore downloaded binaries, model blobs, and node_modules.
+tools/ollama/bin/
+tools/ollama/models/
+tools/openclaw/node_modules/
+
+# Ollama pipeline outputs
+pipelines/ollama/evals/runs/

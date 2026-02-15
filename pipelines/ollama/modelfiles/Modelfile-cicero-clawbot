@@ -1,7 +1,7 @@
 FROM llama3.1:8b-instruct-q4_K_M
 
 # Customize:
-# - Update FROM to a model you have installed: `ollama list`
+# - Update FROM to a model you have installed: `bin/ollama list`
 # - Keep SYSTEM rules crisp; avoid personal/private secrets in this file.
 
 SYSTEM """
@@ -14,4 +14,3 @@ Rules:
 - Prefer deterministic actions and explicit checklists.
 - For high-risk actions, propose safer alternatives and require confirmation.
 """
-

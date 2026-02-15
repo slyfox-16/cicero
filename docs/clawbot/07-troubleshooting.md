@@ -5,8 +5,8 @@
 On the host:
 
 ```bash
-systemctl --user status openclaw-gateway.service --no-pager -l
-journalctl --user -u openclaw-gateway.service -n 200 --no-pager
+systemctl --user status cicero-openclaw-gateway.service --no-pager -l
+journalctl --user -u cicero-openclaw-gateway.service -n 200 --no-pager
 ```
 
 ## Check Whether the Gateway Is Listening
@@ -20,7 +20,7 @@ Common failures:
 
 - Port already in use: change the gateway port or stop the conflicting service.
 - Not bound to loopback: ensure it binds to `127.0.0.1` (not `0.0.0.0`).
-- PATH issues under systemd: use an absolute `openclaw` path or `/usr/bin/env openclaw` in `ExecStart`.
+- PATH issues under systemd: use an absolute path to the repo-local OpenClaw binary in `ExecStart` (recommended).
 
 ## Check Tailscale Serve
 
@@ -41,7 +41,7 @@ On the host:
 
 ```bash
 curl -sS http://127.0.0.1:11434/api/tags | head
-ollama list
+bin/ollama list
 ```
 
 Common failures:
@@ -59,9 +59,8 @@ If you get 401 from OpenClaw:
 
 ## npm / Node Issues
 
-If `sudo npm install -g openclaw@latest` fails:
+If the repo-local install fails (`npm --prefix tools/openclaw install`):
 
 - verify Node 22 is installed: `node -v`
 - check npm version: `npm -v`
-- if you previously installed via a different method (nvm/asdf), PATH may be confusing under sudo/systemd
-
+- if you previously installed Node via a different method (nvm/asdf), PATH may be confusing under systemd

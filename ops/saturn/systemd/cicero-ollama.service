@@ -1,0 +1,20 @@
+[Unit]
+Description=Cicero: Ollama (optional)
+After=network.target
+
+[Service]
+Type=simple
+
+# Assumes the repo is checked out at: %h/cicero
+WorkingDirectory=%h/cicero
+
+# If you installed Ollama repo-locally, this starts it.
+# If you use a system-level Ollama install/service, you likely do NOT want this unit.
+ExecStart=%h/cicero/bin/ollama serve
+
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+

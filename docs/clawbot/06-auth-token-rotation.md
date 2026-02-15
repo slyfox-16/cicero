@@ -24,8 +24,8 @@ On the host:
 
 ```bash
 NEW_TOKEN="$(openssl rand -hex 32)"
-openclaw config set gateway.auth.token "$NEW_TOKEN"
-systemctl --user restart openclaw-gateway.service
+bin/openclaw config set gateway.auth.token "$NEW_TOKEN"
+systemctl --user restart cicero-openclaw-gateway.service
 ```
 
 Set it in your shell for testing:
@@ -51,5 +51,4 @@ If this fails:
 
 - confirm the serve mapping (`sudo tailscale serve status`)
 - confirm the gateway is up locally (`curl -I http://127.0.0.1:18789/ | head`)
-- check gateway logs (`journalctl --user -u openclaw-gateway.service -n 200 --no-pager`)
-
+- check gateway logs (`journalctl --user -u cicero-openclaw-gateway.service -n 200 --no-pager`)

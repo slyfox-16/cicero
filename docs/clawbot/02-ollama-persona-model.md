@@ -7,7 +7,7 @@ Goal: create a local Ollama model named `cicero-clawbot:latest` that embodies th
 On the host:
 
 ```bash
-ollama list
+bin/ollama list
 ```
 
 Pick one you already have installed. Example:
@@ -16,36 +16,29 @@ Pick one you already have installed. Example:
 
 ## 2) Create a Modelfile
 
-Suggested location:
+Source-of-truth Modelfile:
 
-```bash
-mkdir -p ~/ollama
-```
+- `pipelines/ollama/modelfiles/Modelfile-cicero-clawbot`
 
-Create `~/ollama/Modelfile-cicero-clawbot` by starting from:
-
-- `clawbot/templates/Modelfile-cicero-clawbot`
-
-Critical: update the `FROM ...` line to match a model that exists in `ollama list`.
+Critical: update the `FROM ...` line to match a model that exists in `bin/ollama list`.
 
 ## 3) Create the Model
 
 ```bash
-ollama create cicero-clawbot -f ~/ollama/Modelfile-cicero-clawbot
+bin/ollama create cicero-clawbot -f pipelines/ollama/modelfiles/Modelfile-cicero-clawbot
 ```
 
 ## 4) Verify
 
 ```bash
 curl -sS http://127.0.0.1:11434/api/tags | head
-ollama list | grep -i cicero-clawbot
+bin/ollama list | grep -i cicero-clawbot
 ```
 
 ## 5) Smoke Test
 
 ```bash
-ollama run cicero-clawbot:latest "Reply with only: OK"
+bin/ollama run cicero-clawbot:latest "Reply with only: OK"
 ```
 
 Expected: `OK`
-

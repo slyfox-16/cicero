@@ -11,13 +11,13 @@ Replace these variables to match your environment:
 ```bash
 HOSTNAME="saturn"
 OLLAMA_URL="http://127.0.0.1:11434"
-OPENCLOW_LOCAL="http://127.0.0.1:18789"
+OPENCLAW_LOCAL="http://127.0.0.1:18789"
 ```
 
 ## 0) Assumptions
 
 - You can SSH into the host.
-- Ollama is installed on the host and listening on `127.0.0.1:11434`.
+- Ollama is available on the host and listening on `127.0.0.1:11434`.
 - Tailscale is installed on the host and the client, and both are logged into the same tailnet.
 - You will expose OpenClaw via `tailscale serve` (typically requires `sudo`).
 
@@ -27,10 +27,20 @@ On the host:
 
 ```bash
 curl -sS http://127.0.0.1:11434/api/tags | head
-ollama list
+bin/ollama list
 ```
 
 If those fail, fix Ollama first before continuing.
+
+Notes:
+
+- If you are using a repo-local Ollama binary, it is expected at:
+  - `tools/ollama/bin/ollama`
+- In that case, use:
+
+```bash
+bin/ollama list
+```
 
 ## 2) Verify Tailscale
 
@@ -73,4 +83,3 @@ sudo apt-get install -y ripgrep
 ```
 
 Everything can be done with `grep` if you prefer.
-

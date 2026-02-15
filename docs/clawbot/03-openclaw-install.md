@@ -7,15 +7,15 @@ OpenClaw is the **only** remote/control surface documented here.
 On the host:
 
 ```bash
-sudo npm install -g openclaw@latest
-openclaw status
+npm --prefix tools/openclaw install
+bin/openclaw status
 ```
 
 If `openclaw status` fails, inspect:
 
 ```bash
-which openclaw
-openclaw --help | head
+ls -la tools/openclaw/node_modules/.bin/openclaw
+bin/openclaw --help | head
 ```
 
 ## 2) Where OpenClaw Stores Config
@@ -32,8 +32,7 @@ If you run OpenClaw under a **systemd user service**, the service may not inheri
 
 To avoid PATH problems in systemd:
 
-- Prefer `/usr/bin/env openclaw ...` in `ExecStart`, or
-- Use an absolute path from `which openclaw`
+- Prefer an absolute path to the repo-local OpenClaw binary in `ExecStart`, e.g.:
+  - `%h/cicero/bin/openclaw ...`
 
-You'll validate this in `clawbot/04-openclaw-gateway.md`.
-
+You'll validate this in `docs/clawbot/04-openclaw-gateway.md`.

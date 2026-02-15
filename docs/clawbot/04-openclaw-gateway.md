@@ -15,10 +15,9 @@ systemctl --user list-unit-files | grep -i openclaw || true
 systemctl --user list-unit-files | rg -i 'openclaw|claw' || true
 ```
 
-If you see `openclaw-gateway.service`, follow Path A.
-If not, follow Path B.
+If you already have an `openclaw-gateway.service` from another install, you can use it, but the repo-standard unit is `cicero-openclaw-gateway.service` (Path B).
 
-## Path A) If `openclaw-gateway.service` Exists
+## Path A) If `openclaw-gateway.service` Exists (Legacy)
 
 ```bash
 systemctl --user enable --now openclaw-gateway.service
@@ -44,8 +43,8 @@ mkdir -p ~/.config/systemd/user
 
 2) Copy the template:
 
-- Source: `clawbot/templates/openclaw-gateway.service`
-- Destination: `~/.config/systemd/user/openclaw-gateway.service`
+- Source: `ops/saturn/systemd/cicero-openclaw-gateway.service`
+- Destination: `~/.config/systemd/user/cicero-openclaw-gateway.service`
 
 3) Edit `ExecStart`
 
@@ -53,8 +52,8 @@ You must replace the placeholder subcommand and flags.
 Use these to discover the correct gateway start command:
 
 ```bash
-openclaw --help | sed -n '1,120p'
-openclaw help 2>/dev/null | sed -n '1,120p' || true
+bin/openclaw --help | sed -n '1,120p'
+bin/openclaw help 2>/dev/null | sed -n '1,120p' || true
 ```
 
 Look for something like a `gateway`/`server`/`serve` subcommand and flags for:
@@ -66,9 +65,9 @@ Look for something like a `gateway`/`server`/`serve` subcommand and flags for:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now openclaw-gateway.service
-systemctl --user status openclaw-gateway.service --no-pager -l
-journalctl --user -u openclaw-gateway.service -n 100 --no-pager
+systemctl --user enable --now cicero-openclaw-gateway.service
+systemctl --user status cicero-openclaw-gateway.service --no-pager -l
+journalctl --user -u cicero-openclaw-gateway.service -n 100 --no-pager
 ```
 
 5) Verify local reachability:
@@ -85,4 +84,3 @@ curl -I http://127.0.0.1:18789/ | head
 ```bash
 ss -lntp | grep 18789 || true
 ```
-
