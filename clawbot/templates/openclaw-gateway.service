@@ -1,0 +1,28 @@
+[Unit]
+Description=OpenClaw Gateway
+After=network.target
+
+[Service]
+Type=simple
+
+# IMPORTANT:
+# 1) Replace `<GATEWAY_SUBCOMMAND>` with the actual command that starts the gateway.
+# 2) Add flags so it binds to 127.0.0.1 and listens on port 18789.
+#
+# Discover available commands:
+#   openclaw --help
+#   openclaw <subcommand> --help
+#
+# Examples (NOT guaranteed to match your version):
+#   ExecStart=/usr/bin/env openclaw gateway --host 127.0.0.1 --port 18789
+#   ExecStart=/usr/bin/env openclaw serve --bind 127.0.0.1:18789
+
+WorkingDirectory=%h
+ExecStart=/usr/bin/env openclaw <GATEWAY_SUBCOMMAND> <FLAGS_FOR_HOST_AND_PORT>
+
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+
