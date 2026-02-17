@@ -1,6 +1,9 @@
 {
   "name": "cicero-monorepo",
   "private": true,
+  "scripts": {
+    "release:cicero": "bash scripts/release-cicero.sh"
+  },
   "workspaces": [
     "packages/*"
   ]

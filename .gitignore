@@ -12,3 +12,8 @@ packages/cicero/configuration.local.yaml
 
 # npm logs/cache artifacts
 npm-debug.log*
+
+# Local npm install artifacts
+node_modules/
+**/node_modules/
+package-lock.json

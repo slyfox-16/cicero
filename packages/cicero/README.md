@@ -63,6 +63,33 @@ Then run:
 cicero start
 ```
 
+## Release
+
+From repo root, use the release helper script:
+
+```bash
+./scripts/release-cicero.sh 0.1.5
+```
+
+Or via npm script:
+
+```bash
+npm run release:cicero -- 0.1.5
+```
+
+What it does:
+
+- bumps `packages/cicero/package.json` to the requested version
+- rebuilds `packages/cicero/dist/manifest.json`
+- commits release files
+- creates tag `cicero-bundle-v<version>`
+- pushes branch + tag to trigger GitHub Actions publish
+
+Notes:
+
+- requires a clean git working tree before running
+- does not store any secrets in repository files
+
 ## Logging
 
 Metadata-only logs are written to:
