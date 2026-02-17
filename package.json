@@ -1,0 +1,7 @@
+{
+  "name": "cicero-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}

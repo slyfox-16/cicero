@@ -1,0 +1,14 @@
+# Local npm auth files (never commit tokens)
+.npmrc
+**/.npmrc
+*.nmrc
+**/*.nmrc
+
+# Local secret/env overrides
+.env
+.env.*
+!.env.example
+packages/cicero/configuration.local.yaml
+
+# npm logs/cache artifacts
+npm-debug.log*

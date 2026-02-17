@@ -1,4 +1,4 @@
-name: Publish Cicero Bundle
+name: Publish Cicero
 
 on:
   push:

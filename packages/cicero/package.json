@@ -1,18 +1,27 @@
 {
   "name": "@slyfox-16/cicero",
-  "version": "0.1.0",
-  "description": "Cicero personality/configuration bundle package.",
+  "version": "0.1.1",
+  "description": "Cicero bundle + CLI runtime package.",
   "license": "UNLICENSED",
   "private": false,
   "type": "commonjs",
+  "bin": {
+    "cicero": "bin/cicero.js"
+  },
   "files": [
     "personality.txt",
     "configuration.yaml",
-    "dist/manifest.json"
+    "dist/**",
+    "bin/**",
+    "lib/**"
   ],
   "scripts": {
     "build": "node scripts/build.js",
     "prepack": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slyfox-16/cicero.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

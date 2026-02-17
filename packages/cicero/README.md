@@ -1,75 +1,84 @@
 # @slyfox-16/cicero
 
-Pure bundle package for Cicero artifacts. This package contains:
+`@slyfox-16/cicero` is the v0 combined bundle + CLI package.
+
+Included artifacts:
 
 - `personality.txt`
 - `configuration.yaml`
 - `dist/manifest.json` (generated)
+- `cicero` CLI
 
-No runtime code is shipped in this package.
+## CLI
 
-## Install from GitHub Packages
+Supported command:
 
-1. Configure npm for the scope and registry.
-2. Authenticate with a token via environment variable or `npm login`.
+- `cicero start`
 
-Example `.npmrc` (safe template):
+Behavior in v0:
 
-```ini
-@slyfox-16:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-```
+- Interactive text REPL only (`cicero> `)
+- Ephemeral session (no persistence across runs)
+- Ollama-only backend
+- No memory integration yet
+- No big-brain/Modal routing yet
 
-Install:
+Exit with `exit` or `Ctrl+C`.
 
-```bash
-npm install @slyfox-16/cicero@0.1.0
-# or by dist-tag
-npm install @slyfox-16/cicero@latest
-```
+## What Belongs Where
 
-If you prefer login flow:
+- `personality.txt`:
+  - model behavior and style instructions
+- `configuration.yaml`:
+  - shared bundle defaults, including `backends.local.model_id`
+- runtime environment config:
+  - environment-specific values like Ollama host, Modal endpoint, and auth should be layered by runtime/deployment configuration
+  - do not store secrets in this repository
 
-```bash
-npm login --scope=@slyfox-16 --registry=https://npm.pkg.github.com
-```
+## Ollama Setup
 
-## Build
+`cicero start` verifies Ollama connectivity at startup. Default base URL:
 
-From repo root:
+- `http://saturn:11434`
 
-```bash
-npm run build --prefix packages/cicero
-```
-
-This generates `packages/cicero/dist/manifest.json` with package version and SHA-256 hashes for:
-
-- `personality.txt`
-- `configuration.yaml`
-
-## Publish via GitHub Actions (recommended)
-
-Publishing is automated by `.github/workflows/publish-cicero-bundle.yml`.
-
-- Trigger: push a tag matching `cicero-bundle-v*`
-- Auth: uses `GITHUB_TOKEN`
-- Required workflow permissions:
-  - `contents: read`
-  - `packages: write`
-
-## Manual Publish from Laptop (PAT classic)
-
-Use a GitHub Personal Access Token (classic) with:
-
-- `read:packages`
-- `write:packages`
-
-Do not commit tokens. Use env vars at publish time:
+Override with environment variable:
 
 ```bash
-export NODE_AUTH_TOKEN=YOUR_PAT_CLASSIC
-npm run build --prefix packages/cicero
-npm publish --prefix packages/cicero --registry=https://npm.pkg.github.com
+export OLLAMA_BASE_URL=http://your-host:11434
 ```
 
-You can also keep a local untracked `.npmrc` in your home directory with the same placeholder format.
+If unreachable, the CLI prints steps to install/start Ollama and exits non-zero.
+
+## Install
+
+From GitHub Packages as a global CLI:
+
+```bash
+npm install -g @slyfox-16/cicero
+```
+
+Then run:
+
+```bash
+cicero start
+```
+
+## Logging
+
+Metadata-only logs are written to:
+
+- `~/.cicero/logs/`
+
+Each request logs:
+
+- timestamp
+- backend (`ollama`)
+- model_id
+- latency
+- token counts when provided by Ollama
+
+Prompts/responses are not logged by default.
+
+## Roadmap Note
+
+Memory integration, web UI, and big-brain routing are intentionally deferred to later packages/releases.

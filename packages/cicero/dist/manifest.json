@@ -1,13 +1,14 @@
 {
   "name": "@slyfox-16/cicero",
-  "version": "0.1.0",
-  "generatedAt": "2026-02-17T06:08:47.621Z",
+  "version": "0.1.1",
+  "generatedAt": "2026-02-17T08:20:36.487Z",
   "files": {
     "personality.txt": {
-      "sha256": "fd82ab7c372772c092860236fea7fb955f4abbfc73e062d00b1a2b278c7b7d60"
+      "sha256": "ff3b77ab724d8e4dc65ee01614aa4e20c896ceaa83e8c22bba6eba677aed7bb1"
     },
     "configuration.yaml": {
-      "sha256": "cd975d61b173fb81b67b885f5a690dd3de73ecb31ba808bdc4a900a0e8f5029f"
+      "sha256": "12f9c76e9c74284f34d9224c6730bfdc1eb48acbcdd0889c7e5c59c7b74d321d"
     }
-  }
+  },
+  "gitSha": "97e486a"
 }
