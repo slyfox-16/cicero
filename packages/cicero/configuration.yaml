@@ -1,0 +1,28 @@
+cicero:
+  name: cicero
+  version: 0.1
+
+router:
+  trigger_phrase: "use big brain"
+  strip_trigger: true
+  default_backend: local
+
+backends:
+  local:
+    type: ollama
+    base_url: "http://saturn:11434"
+    model: "deepseek-r1-distill-7b-q4"
+    timeout_s: 120
+  big_brain:
+    type: modal
+    endpoint: "https://<modal-app>.modal.run/chat"
+    auth:
+      type: bearer_env
+      env_var: MODAL_CICERO_TOKEN
+    model: "deepseek-r1-full"
+    timeout_s: 180
+
+memory:
+  chroma:
+    enabled: false
+    url: "http://saturn-chroma:8000"

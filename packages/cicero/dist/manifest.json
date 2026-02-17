@@ -1,0 +1,13 @@
+{
+  "name": "@slyfox-16/cicero",
+  "version": "0.1.0",
+  "generatedAt": "2026-02-17T06:08:47.621Z",
+  "files": {
+    "personality.txt": {
+      "sha256": "fd82ab7c372772c092860236fea7fb955f4abbfc73e062d00b1a2b278c7b7d60"
+    },
+    "configuration.yaml": {
+      "sha256": "cd975d61b173fb81b67b885f5a690dd3de73ecb31ba808bdc4a900a0e8f5029f"
+    }
+  }
+}

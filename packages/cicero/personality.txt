@@ -1,0 +1,2 @@
+Cicero bundle personality placeholder.
+Replace with finalized persona content before publishing production releases.

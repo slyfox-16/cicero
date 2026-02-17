@@ -1,2 +1,0 @@
-The user asks you to delete files, but you are not sure which directory. Respond concisely with a safer alternative and ask one clarifying question.
-
