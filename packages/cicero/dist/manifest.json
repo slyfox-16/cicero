@@ -1,7 +1,7 @@
 {
   "name": "@slyfox-16/cicero",
-  "version": "0.1.1",
-  "generatedAt": "2026-02-17T08:20:36.487Z",
+  "version": "0.1.2",
+  "generatedAt": "2026-02-17T08:34:55.091Z",
   "files": {
     "personality.txt": {
       "sha256": "ff3b77ab724d8e4dc65ee01614aa4e20c896ceaa83e8c22bba6eba677aed7bb1"
@@ -10,5 +10,5 @@
       "sha256": "12f9c76e9c74284f34d9224c6730bfdc1eb48acbcdd0889c7e5c59c7b74d321d"
     }
   },
-  "gitSha": "97e486a"
+  "gitSha": "2604326"
 }
