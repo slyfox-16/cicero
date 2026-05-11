@@ -1,37 +1,30 @@
-# Cicero v1 Scope
-
-## Purpose
-Cicero v1 is the first production-facing release of Cicero. This document defines the user-visible capabilities delivered in this milestone.
+# Scope
 
 ## What Cicero Is
-Cicero is a behavior-guided assistant with a web-based conversation experience and deterministic memory for user preferences and project context. v1 establishes a clear baseline for reliability, safety, and predictable behavior.
 
-## Included in v1
-The following capabilities are in scope:
+Cicero is a personal AI assistant running as an OpenClaw agent on Saturn. It is:
 
-- Persistent landing page at `/`
-- Browser-based chat at `/chat`
-- Deterministic, database-backed memory for preferences and project context
-- Structured logging and health diagnostics
-- Defined personality and behavioral rules
-- Written security and boundary rules
+- A configured agent, not a platform. OpenClaw is the platform. This repo holds the workspace, skills, and deploy scripts.
+- Local-first. Inference runs on Saturn's GPU via Ollama. No data leaves the machine except over localhost.
+- CLI-operated. The interface is `openclaw agent --agent main --message "..."`. No web UI.
+- Passive. No proactive outreach, no scheduled tasks, no channel subscriptions — yet.
 
-## Supported Interfaces
-v1 supports these web interfaces:
+## In Scope
 
-- `GET /` for the landing page
-- `GET /chat` for the chat interface
+- Cicero's personality, behavioral rules, and workspace configuration (`workspace/`).
+- Skill definitions, current and future (`workspace/skills/`).
+- Deploy scripts and service configuration for Saturn and (eventually) Mac (`deploy/`).
+- Architecture, security, and roadmap documentation (`docs/`).
 
-## Behavioral and Security Boundaries
-Cicero v1 operates within explicit behavioral and security boundaries:
+## Out of Scope
 
-- No secrets are stored in memory records or logs
-- System behavior follows documented boundary expectations
-- Public documentation excludes sensitive personal, operational, and infrastructure detail
+- A web UI. There is no `/` or `/chat` endpoint. There will not be one unless OpenClaw's Control UI satisfies that need.
+- A custom inference engine. OpenClaw + Ollama handle inference.
+- Multi-user access. Cicero is a personal assistant for one person.
+- Public deployment. The gateway is bound to loopback. Exposing it publicly is out of scope and discouraged.
 
-## Out of Scope for v1
-The following are out of scope:
+## Interfaces
 
-- Infrastructure topology, hosting internals, or deployment architecture
-- Operational runbooks and environment-specific configuration details
-- Unspecified interfaces beyond the documented web endpoints
+One: `openclaw agent --agent main --message "<text>"`.
+
+In the future: iMessage via the Mac mini migration (see `docs/roadmap.md`).
