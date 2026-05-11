@@ -11,10 +11,10 @@ Local-first. CLI-operated. No cloud inference, no web UI, no subscriptions.
 **Interactive session (TUI):**
 
 ```bash
-openclaw tui
+openclaw tui --local
 ```
 
-Opens a full terminal chat UI connected to the running gateway. Type to converse; history persists across sessions.
+Opens a full terminal chat UI running against the embedded local agent (bypasses gateway device pairing). Type to converse.
 
 **One-shot (scripting or quick queries):**
 
