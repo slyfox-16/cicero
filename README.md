@@ -23,7 +23,7 @@ systemctl --user status openclaw-gateway
 ## Fresh Install (Saturn)
 
 ```bash
-git clone git@github.com:slyfox-16/cicero.git ~/cicero
+git clone https://github.com/slyfox-16/cicero.git ~/cicero
 cd ~/cicero
 ./deploy/saturn/setup.sh
 ```
