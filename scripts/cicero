@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  printf 'Usage:\n'
+  printf '  cicero chat          Open interactive chat (TUI)\n'
+  printf '  cicero ask <msg>     Send a one-shot message\n'
+  exit 1
+}
+
+case "${1:-}" in
+  chat) exec openclaw tui --local ;;
+  ask)  [[ $# -lt 2 ]] && usage; exec openclaw agent --agent main --message "${*:2}" ;;
+  *)    usage ;;
+esac

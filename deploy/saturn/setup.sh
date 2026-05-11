@@ -98,7 +98,18 @@ else
   log "systemd unit already installed (leaving token alone)"
 fi
 
-# 6. Enable + start
+# 6. Install cicero CLI wrapper
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+ln -sfn "$REPO_ROOT/scripts/cicero" "$LOCAL_BIN/cicero"
+log "cicero -> $LOCAL_BIN/cicero"
+# Add ~/.local/bin to PATH in .bashrc if not already there
+if ! grep -q 'HOME/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+  printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.bashrc"
+  log "added ~/.local/bin to PATH in .bashrc"
+fi
+
+# 7. Enable + start
 systemctl --user enable --now openclaw-gateway >/dev/null
 sleep 2
 if systemctl --user is-active --quiet openclaw-gateway; then
