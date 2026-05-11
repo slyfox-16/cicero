@@ -8,6 +8,16 @@ Local-first. CLI-operated. No cloud inference, no web UI, no subscriptions.
 
 ## Running
 
+**Interactive session (TUI):**
+
+```bash
+openclaw tui
+```
+
+Opens a full terminal chat UI connected to the running gateway. Type to converse; history persists across sessions.
+
+**One-shot (scripting or quick queries):**
+
 ```bash
 openclaw agent --agent main --message "your message here"
 ```
