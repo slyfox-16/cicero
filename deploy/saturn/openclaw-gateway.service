@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenClaw Gateway (Cicero)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart="/usr/bin/node" "/usr/lib/node_modules/openclaw/dist/index.js" gateway --port 18789
+Restart=always
+RestartSec=5
+KillMode=process
+Environment="HOME=/home/carlos"
+Environment="PATH=/home/carlos/.local/bin:/home/carlos/.npm-global/bin:/home/carlos/bin:/home/carlos/.nvm/current/bin:/home/carlos/.fnm/current/bin:/home/carlos/.volta/bin:/home/carlos/.asdf/shims:/home/carlos/.local/share/pnpm:/home/carlos/.bun/bin:/usr/local/bin:/usr/bin:/bin"
+Environment=OPENCLAW_GATEWAY_PORT=18789
+Environment=OPENCLAW_GATEWAY_TOKEN=__GENERATE_ME__
+Environment="OPENCLAW_SYSTEMD_UNIT=openclaw-gateway.service"
+Environment=OPENCLAW_SERVICE_MARKER=openclaw
+Environment=OPENCLAW_SERVICE_KIND=gateway
+
+[Install]
+WantedBy=default.target
