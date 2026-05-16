@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.openclaw.gateway</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE_BIN__</string>
+        <string>__OPENCLAW_ENTRY__</string>
+        <string>gateway</string>
+        <string>--port</string>
+        <string>18789</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>PATH</key>
+        <string>__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>OPENCLAW_GATEWAY_PORT</key>
+        <string>18789</string>
+        <key>OPENCLAW_GATEWAY_TOKEN</key>
+        <string>__GENERATE_ME__</string>
+        <key>OPENCLAW_SERVICE_MARKER</key>
+        <string>openclaw</string>
+        <key>OPENCLAW_SERVICE_KIND</key>
+        <string>gateway</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/openclaw-gateway.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/openclaw-gateway.err.log</string>
+</dict>
+</plist>

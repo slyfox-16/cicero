@@ -6,13 +6,13 @@ Current state and what comes next. Ordered by implementation priority — quick 
 
 ## Now (stable)
 
-Cicero CLI on Saturn. Local-only. Passive.
+Cicero CLI on minerva (Mac). Local-only. Passive.
 
-- OpenClaw 2026.5.7, qwen3:8b via Ollama on a GTX 1080.
+- OpenClaw 2026.5.12, `deepseek-r1:14b` via Ollama on Apple Silicon.
 - Workspace versioned in git, symlinked into `~/.openclaw/workspace`.
 - Personality and behavioral rules in `workspace/SOUL.md`.
 - `cicero-health` and `cicero-memory` skills registered as stubs.
-- Systemd service, idempotent `deploy/saturn/setup.sh`.
+- launchd agent (`ai.openclaw.gateway`), idempotent `deploy/mac/setup.sh`.
 - `cicero chat` and `cicero ask` CLI wrappers.
 
 ---
@@ -39,7 +39,7 @@ openclaw plugins install clawhub:openclawbrain@0.2.20
 openclaw plugins enable openclawbrain
 openclaw gateway restart
 ```
-Local SQLite + FTS5 graph with Ollama-backed embeddings. Bounded context injection per turn — does not bloat the prompt with full history. This is the cold memory layer. Requires OpenClaw ≥ 2026.5.2 (we are on 2026.5.7).
+Local SQLite + FTS5 graph with Ollama-backed embeddings. Bounded context injection per turn — does not bloat the prompt with full history. This is the cold memory layer. Requires OpenClaw ≥ 2026.5.2 (we are on 2026.5.12).
 
 Legacy ZIP format (pre-ClawPack); static analysis is benign, but verify the bundle before enabling: `openclaw plugins install --dry-run clawhub:openclawbrain@0.2.20`.
 
@@ -68,11 +68,11 @@ Chroma remains on the roadmap as a semantic search layer over structured data (h
 
 ## 2. Big Brain / Galaxy Brain Routing
 
-Cicero runs qwen3:8b locally by default — free, private, sufficient for daily use. Complex analytical tasks (reports, financial narratives, multi-step synthesis) benefit from a more capable model. Big Brain / Galaxy Brain mode adds optional Anthropic API escalation.
+Cicero runs `deepseek-r1:14b` locally by default — free, private, sufficient for daily use. Complex analytical tasks (reports, financial narratives, multi-step synthesis) benefit from a more capable model. Big Brain / Galaxy Brain mode adds optional Anthropic API escalation.
 
 | Mode | Model | Use case |
 |---|---|---|
-| Default | `qwen3:8b` (local, Ollama) | Routing, triage, simple lookups, daily use |
+| Default | `deepseek-r1:14b` (local, Ollama) | Routing, triage, simple lookups, daily use |
 | Big Brain | `claude-sonnet-4-6` (Anthropic API) | Monthly reports, bill analysis, investment summaries |
 | Galaxy Brain | `claude-opus-4-7` (Anthropic API) | Annual financial review, deep synthesis, complex multi-step tasks |
 
@@ -182,18 +182,16 @@ For models trained via Dagster pipelines and logged to MLflow:
 
 ---
 
-## 8. Mac Migration
+## 8. iMessage Channel
 
-When iMessage integration is worth pursuing:
+Cicero is now running on minerva (Mac). The Mac migration is complete. iMessage is the next channel unlock.
 
-1. Write `deploy/mac/setup.sh` (Homebrew + launchd, mirrors Saturn setup).
-2. Install OpenClaw + Ollama on Mac mini. Validate workspace symlink and gateway.
-3. Move Chroma to Mac (hot-path latency — see memory architecture above).
-4. Keep Saturn running as the data server: Postgres, MLflow, Dagster, Chroma for health/structured data if needed.
-5. Enable iMessage channel (BlueBubbles or native bridge). This unblocks proactive notifications.
-6. Migrate or replicate Postgres health data if query latency to Saturn becomes a problem.
+1. Enable iMessage via BlueBubbles or the native macOS bridge.
+2. Wire the channel in OpenClaw (`openclaw channels add imessage`).
+3. This unblocks proactive notifications — required for cron-driven heartbeats and report delivery.
+4. Start with read-only (receive only) before enabling send, per `docs/security.md`.
 
-See `deploy/mac/README.md` and `docs/architecture.md` for the migration plan.
+Keep Saturn running as the data server (Postgres, MLflow, Dagster) until those workloads migrate or are confirmed unnecessary.
 
 ---
 

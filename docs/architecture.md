@@ -1,6 +1,6 @@
 # Cicero Architecture
 
-Cicero is a personal AI assistant running as an OpenClaw agent on Saturn (Linux). The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the inference loop, channel layer, memory system, and skill runtime.
+Cicero is a personal AI assistant running as an OpenClaw agent on minerva (Mac). The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the inference loop, channel layer, memory system, and skill runtime.
 
 ---
 
@@ -10,9 +10,9 @@ Cicero is a personal AI assistant running as an OpenClaw agent on Saturn (Linux)
 
 A custom Python/FastAPI brain meant maintaining an inference loop, channel adapters, memory serialization, and a skill runtime in perpetuity. OpenClaw already solves all of that. The repo's job is to configure the agent — personality, model, skills — not to reimplement the platform. Less surface area is more reliable surface area.
 
-### Why qwen3:8b
+### Why deepseek-r1:14b
 
-Fits in 8GB VRAM (GTX 1080 on Saturn). Strong tool-calling support (`compat.supportsTools: true`). Holds persona well across multi-turn conversations. `llama3.1:8b-instruct-q4_K_M` is the documented fallback if persona drift is observed.
+Originally deployed with `qwen3:8b` on Saturn (GTX 1080, 8GB VRAM). After migrating to minerva (Apple Silicon, unified memory), `qwen3:30b-a3b` was available but failed to hold the Cicero persona on direct identity questions — its RLHF training overrides system prompt persona instructions. `deepseek-r1:14b` (9 GB) respects persona instructions reliably, has strong tool-calling support (`compat.supportsTools: true`), and fits comfortably in Apple Silicon unified memory. The R1 reasoning approach lets the model actively apply workspace instructions rather than defaulting to base training identity.
 
 ### Why Chroma is a skill, not core memory
 
@@ -35,26 +35,31 @@ No Telegram, Discord, iMessage, or any channel is wired. Saturn is a headless Li
 ## Current Architecture
 
 ```
-CLI (openclaw agent …)
+cicero chat / cicero ask
         │
-        ▼
-OpenClaw Gateway (ws://127.0.0.1:18789, loopback only)
+        ├── cicero chat → openclaw tui --local (embedded agent, no gateway needed)
         │
-        ├── Agent runtime
-        │       ├── Reads workspace/ files at session start
-        │       │   (SOUL.md, AGENTS.md, IDENTITY.md, USER.md, TOOLS.md)
-        │       ├── Injects loaded skill descriptions into system prompt
-        │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
-        │
-        ├── Ollama provider (http://127.0.0.1:11434)
-        │       └── qwen3:8b  (keep_alive: 60s, ~7.4GB VRAM when loaded)
-        │
-        └── Workspace skills (workspace/skills/)
-                ├── cicero-health  [stub — Postgres not yet wired]
-                └── cicero-memory  [stub — Chroma not yet wired]
+        └── cicero ask  → openclaw agent --agent main --message "..."
+                                │
+                                ▼
+                        OpenClaw Gateway (ws://127.0.0.1:18789, loopback only)
+                        Managed by launchd (ai.openclaw.gateway)
+                                │
+                                ├── Agent runtime
+                                │       ├── Reads workspace/ files at session start
+                                │       │   (SOUL.md, AGENTS.md, IDENTITY.md, USER.md, TOOLS.md)
+                                │       ├── Injects loaded skill descriptions into system prompt
+                                │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
+                                │
+                                ├── Ollama provider (http://127.0.0.1:11434)
+                                │       └── deepseek-r1:14b  (~9GB unified memory)
+                                │
+                                └── Workspace skills (workspace/skills/)
+                                        ├── cicero-health  [stub — Postgres not yet wired]
+                                        └── cicero-memory  [stub — Chroma not yet wired]
 ```
 
-Data stays on Saturn. No outbound traffic except Ollama inference calls (localhost).
+Data stays on minerva. No outbound traffic except Ollama inference calls (localhost).
 
 ---
 
@@ -92,26 +97,26 @@ cicero/
 
 ---
 
-## Saturn → Mac Migration Plan
+## Deploy
 
-The move happens when iMessage integration is worth pursuing. The workspace is portable — it moves as-is. What changes:
+| Component | minerva (current) | Saturn (legacy) |
+|-----------|-------------------|-----------------|
+| Machine | Mac mini, Apple Silicon | Linux, GTX 1080 |
+| Service manager | launchd user agent | systemd user unit |
+| Package manager | Homebrew + npm | npm global (sudo) |
+| Gateway token | env var in launchd plist | env var in systemd unit |
+| Channels | none (CLI only) | none (CLI only) |
+| Ollama | Apple Silicon unified memory | GTX 1080, 8GB VRAM |
+| Model | `deepseek-r1:14b` | `qwen3:8b` |
+| Setup script | `deploy/mac/setup.sh` | `deploy/saturn/setup.sh` |
 
-| Component | Saturn (now) | Mac mini (later) |
-|-----------|-------------|-----------------|
-| Service manager | systemd user unit | launchd plist |
-| Package manager | npm global (sudo) | Homebrew |
-| Gateway token | env var in unit | env var in plist |
-| Channels | none (CLI only) | iMessage (via BlueBubbles or native bridge) |
-| Ollama | GTX 1080, 8GB VRAM | Apple Silicon unified memory |
-| Health data | Postgres on Saturn | Postgres migrates to Mac, or stays on Saturn as a service |
-
-`deploy/saturn/setup.sh` is the template. `deploy/mac/setup.sh` (not yet written) mirrors it with Homebrew, launchd, and channel enablement.
+Both setup scripts are idempotent. `deploy/mac/setup.sh` is the active install path.
 
 ---
 
 ## Known Limitations and Open Questions
 
-- **Skill routing.** qwen3:8b does not reliably route natural-language queries to workspace skills via prose-only SKILL.md. Skills with real tool-call dispatch (HTTP/subprocess) will route more reliably. The stubs are functional as documentation and registration artifacts.
-- **keep_alive: 60s.** qwen3:8b unloads from VRAM 60 seconds after idle. Cold start takes ~3-5s. Trade-off: Saturn has only ~500MB VRAM headroom when the model is loaded, so holding it indefinitely crowds out anything else Ollama needs to do.
-- **Single agent.** Only the `main` agent is configured. Multi-agent workflows (e.g., a separate coding agent, a separate scheduling agent) are possible in OpenClaw but not yet needed.
-- **No backup strategy for ~/.openclaw.** Session history and credentials live outside the repo. The workspace is backed by git. A future `deploy/saturn/backup.sh` should handle the rest.
+- **Skill routing.** Skills with prose-only SKILL.md definitions route inconsistently. Skills with real tool-call dispatch (HTTP/subprocess) route more reliably. The stubs are functional as documentation and registration artifacts.
+- **deepseek-r1 thinking blocks.** The model emits `<think>...</think>` reasoning before responses. OpenClaw suppresses these in TUI output; they are visible in raw trajectory logs. No action needed unless verbosity becomes a problem.
+- **Single agent.** Only the `main` agent is configured. Multi-agent workflows are possible in OpenClaw but not yet needed.
+- **No backup strategy for ~/.openclaw.** Session history and credentials live outside the repo. The workspace is backed by git. A future `deploy/mac/backup.sh` should handle the rest.
