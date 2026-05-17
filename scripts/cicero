@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PYTHON="/Users/cicero.ortega/miniconda3/envs/cicero-memory/bin/python"
+
 usage() {
   printf 'Usage:\n'
   printf '  cicero chat          Open a fresh chat session\n'
@@ -8,8 +11,33 @@ usage() {
   exit 1
 }
 
+# Run retrieval middleware and prepend any relevant memory context to MESSAGE.
+# Returns the (possibly augmented) message on stdout.
+_maybe_inject() {
+  local msg="$1"
+  "$PYTHON" - "$msg" <<'PY' 2>/dev/null
+import sys, os, pathlib
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "lib"))
+from retrieval_middleware import maybe_retrieve
+msg = sys.argv[1]
+ctx = maybe_retrieve(msg)
+if ctx:
+    print(ctx + "\n\n" + msg)
+else:
+    print(msg)
+PY
+}
+
 case "${1:-}" in
   chat) exec openclaw tui --local --session "$(date +%s%N)" ;;
-  ask)  [[ $# -lt 2 ]] && usage; exec openclaw agent --agent main --message "${*:2}" ;;
-  *)    usage ;;
+  ask)
+    [[ $# -lt 2 ]] && usage
+    RAW_MSG="${*:2}"
+    FULL_MSG="$(_maybe_inject "$RAW_MSG")"
+    exec openclaw agent --agent main --message "$FULL_MSG"
+    ;;
+  *) usage ;;
 esac
