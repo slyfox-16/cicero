@@ -18,6 +18,10 @@ Originally deployed with `qwen3:8b` on Saturn (GTX 1080, 8GB VRAM). After migrat
 
 OpenClaw's built-in memory (workspace MD files, daily notes, MEMORY.md) handles preferences and short-term context. Chroma earns its place as a semantic search layer over structured data — health records, garden notes, decision logs — that is too large and too structured for the workspace-file model. Keeping it a skill means it is optional, replaceable, and has a clean boundary.
 
+**2026-05-16 update.** Backend wired end-to-end. Server-mode chromadb on `127.0.0.1:8000` (launchd-managed `ai.cicero.chroma`), single collection `cicero_memory`, deterministic SHA-256 IDs for upsert. The `cicero-memory` skill is configured to route to the `query_cicero_memory_tool` MCP tool (registered via `openclaw mcp set`), backed by `lib/memory_mcp.py` → `lib/memory_query.py`. Backstory (`docs/cicero-backstory.md`) is the seed corpus; future workstreams will add health digests and decision logs.
+
+**Open gap: tool dispatch from the chat agent.** `deepseek-r1:14b` is a reasoning model and does not support Ollama function calling — attempts to enable tools for it produce "provider rejected the request schema or tool payload" errors. The chat agent therefore cannot invoke the MCP tool mid-session today. Retrieval works fully from scripts and direct Python invocation. The skill's SKILL.md documents the fallback behavior (answer from loaded workspace files). This unblocks the day a tool-capable model that also holds the Cicero persona is available.
+
 ### Why git replaces MLflow
 
 The workspace is Markdown files, not model weights. Version control on configuration and personality is git's problem. MLflow solves experiment tracking for training runs. There are no training runs here.
@@ -54,9 +58,21 @@ cicero chat / cicero ask
                                 ├── Ollama provider (http://127.0.0.1:11434)
                                 │       └── deepseek-r1:14b  (~9GB unified memory)
                                 │
-                                └── Workspace skills (workspace/skills/)
-                                        ├── cicero-health  [stub — Postgres not yet wired]
-                                        └── cicero-memory  [stub — Chroma not yet wired]
+                                ├── Workspace skills (workspace/skills/)
+                                │       ├── cicero-health  [stub — Postgres not yet wired]
+                                │       └── cicero-memory  →  query_cicero_memory_tool MCP tool
+                                │                                  │
+                                │                                  ▼
+                                │                          memory_mcp.py (stdio-launched)
+                                │                                  │
+                                │                                  ▼
+                                │                          memory_query.py (cosine search)
+                                │                                  │
+                                │                                  ▼
+                                └── Chroma server (http://127.0.0.1:8000, loopback only)
+                                        Managed by launchd (ai.cicero.chroma)
+                                        Persist dir: ~/cicero/data/chroma/
+                                        Collection: cicero_memory (all-MiniLM-L6-v2, 384-dim)
 ```
 
 Data stays on minerva. No outbound traffic except Ollama inference calls (localhost).
@@ -77,8 +93,19 @@ cicero/
 │   ├── HEARTBEAT.md        Periodic task checklist (empty — Cicero is passive now).
 │   ├── skills/             Workspace-level skill files (auto-discovered by OpenClaw).
 │   │   ├── cicero-health/  Stub. Pending health data ingestion workstream.
-│   │   └── cicero-memory/  Stub. Pending Chroma wiring.
+│   │   └── cicero-memory/  Routes to query_cicero_memory_tool MCP server.
 │   └── cron/               Reserved for future proactive agents. Empty now.
+│
+├── lib/                       Importable Python modules + MCP servers.
+│   ├── memory_query.py        query_cicero_memory() — semantic retrieval over Chroma.
+│   └── memory_mcp.py          MCP server exposing query_cicero_memory_tool to the agent.
+│
+├── scripts/
+│   ├── cicero                 CLI wrapper.
+│   └── ingest_memory.py       Idempotent ingestion of cicero-backstory.md into Chroma.
+│
+├── data/                      [gitignored] Chroma vector store. Local-only.
+│   └── chroma/
 │
 ├── deploy/
 │   ├── saturn/

@@ -28,7 +28,10 @@ See [SOUL.md](./SOUL.md). No emojis. No filler. Concise, structured, direct. Do 
 
 ## Tools
 
-Skills register tools. See `TOOLS.md` for environment-specific notes (hostnames, paths, device names). The `health` and `chroma` skills are currently stubs; their real implementations are upcoming workstreams.
+Skills register tools. See `TOOLS.md` for environment-specific notes (hostnames, paths, device names).
+
+- **`cicero-memory`** is **live**. The `cicero-memory__query_cicero_memory_tool` tool searches a local Chroma vector store containing Cicero's biographical history, behavioral patterns (`character_residue` chunks), and operational background. Call it whenever the user asks about Cicero's past, his stance on something, what he remembers, or anything not present in the loaded workspace files. Do not answer from base-model training when this tool would yield grounded results.
+- **`cicero-health`** is still a stub; the health-data ingestion workstream is upcoming.
 
 ## Heartbeats
 

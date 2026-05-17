@@ -17,19 +17,26 @@ cicero/
 │   ├── HEARTBEAT.md        Periodic task checklist (currently passive).
 │   └── skills/             Workspace-level skills, auto-discovered by OpenClaw.
 │       ├── cicero-health/  Stub. Postgres not yet wired.
-│       └── cicero-memory/  Stub. Chroma not yet wired.
+│       └── cicero-memory/  Routes to query_cicero_memory_tool MCP server.
+├── lib/                    Importable Python modules + MCP servers.
+│   ├── memory_query.py     query_cicero_memory() — semantic retrieval over Chroma.
+│   └── memory_mcp.py       MCP server exposing query_cicero_memory_tool.
+├── data/                   [gitignored] Chroma vector store. Local-only.
+│   └── chroma/
 ├── deploy/
 │   ├── mac/
 │   │   ├── setup.sh                   Idempotent Mac installer (active).
 │   │   └── ai.openclaw.gateway.plist  launchd unit template (token templated).
 │   └── saturn/                        Legacy Linux deploy. Not the active path.
 ├── scripts/
-│   └── cicero                         CLI wrapper: `cicero chat` / `cicero ask`
+│   ├── cicero                         CLI wrapper: `cicero chat` / `cicero ask`
+│   └── ingest_memory.py               Idempotent ingestion of docs/cicero-backstory.md into Chroma.
 └── docs/
     ├── architecture.md    Current design and decisions log.
     ├── roadmap.md         Upcoming workstreams in priority order.
     ├── security.md        Operational discipline for running LLMs locally.
-    └── scope.md           What Cicero is and is not.
+    ├── scope.md           What Cicero is and is not.
+    └── cicero-backstory.md  Seed corpus for the cicero-memory vector store.
 ```
 
 ---
@@ -160,6 +167,61 @@ print('done')
 | SOUL.md edit has no effect on `cicero ask` | openclaw.json change needs restart | Restart gateway |
 | Workspace symlink wrong after worktree cleanup | Symlink pointed at worktree path | `ln -sfn ~/cicero/workspace ~/.openclaw/workspace` |
 | Onboard re-run changed default model | `openclaw onboard` auto-pulls gemma4 | Re-pin: `openclaw config get agents.defaults`, update `model.primary` |
+| `cicero ask` answers without backstory context | Chroma server down — MCP tool returns empty | `curl -fsS http://127.0.0.1:8000/api/v2/heartbeat`; `launchctl kickstart -k "gui/$(id -u)/ai.cicero.chroma"` |
+| Ingestion fails with `Could not connect to tenant` | Chroma not running or wrong port | Check `~/Library/Logs/cicero-chroma.err.log`; restart unit |
+| Agent never invokes `query_cicero_memory_tool` | MCP server unregistered or gateway cached old config | `openclaw mcp list` should show `cicero-memory`; if missing re-run `openclaw mcp set`; restart gateway |
+| MCP tool errors with `ModuleNotFoundError: mcp` | `mcp` package not in env | `uv pip install --python ~/miniconda3/envs/cicero-memory/bin/python mcp` |
+
+---
+
+## Chroma vector memory
+
+The `cicero-memory` skill is backed by a local Chroma server holding semantically-chunked biographical and operational lore.
+
+| Path | Purpose |
+|---|---|
+| `~/cicero/data/chroma/` | Persistent vector store (gitignored — binary index files) |
+| `~/cicero/scripts/ingest_memory.py` | Idempotent ingestion of `docs/cicero-backstory.md` |
+| `~/cicero/lib/memory_query.py` | `query_cicero_memory(...)` library function |
+| `~/cicero/lib/memory_mcp.py` | MCP server exposing `query_cicero_memory_tool` as an agent tool |
+| `~/cicero/workspace/skills/cicero-memory/SKILL.md` | Routing prose; tells the agent when to call the MCP tool |
+| `~/Library/LaunchAgents/ai.cicero.chroma.plist` | launchd unit for the Chroma server |
+| `~/Library/Logs/cicero-chroma.{out,err}.log` | Server logs |
+
+Server runs at `127.0.0.1:8000`, collection `cicero_memory`, embeddings via `all-MiniLM-L6-v2` (384-dim, cosine). Python env: conda `cicero-memory` (3.11) with packages installed via `uv`.
+
+### Current limitation — chat cannot call the tool yet
+
+The MCP server is registered and works end-to-end from Python (`scripts/ingest_memory.py`, `lib/memory_query.py`). But the active chat model `deepseek-r1:14b` is a reasoning model and does **not** support Ollama function calling — declaring `supportsTools: true` for it in `openclaw.json` causes "provider rejected the request schema or tool payload" errors. The chat agent therefore cannot invoke `query_cicero_memory_tool` mid-session.
+
+This unblocks automatically when:
+1. A new Ollama model that holds the Cicero persona *and* supports tool calls becomes available (test with the persona compliance check in "Changing the model" above), or
+2. OpenClaw gains a way to expose MCP results to a non-tool-using model (e.g. auto-prepending top-k hits into the message context).
+
+The retrieval infrastructure is fully operational from scripts and from any tool-capable client. No action needed beyond the model swap when one is available.
+
+### Operating the server
+
+```bash
+# Health check
+curl -fsS http://127.0.0.1:8000/api/v2/heartbeat
+
+# Restart Chroma (after plist edits)
+launchctl kickstart -k "gui/$(id -u)/ai.cicero.chroma"
+
+# Re-ingest (idempotent — safe to re-run after editing the backstory)
+~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py
+
+# Dry run (no writes — prints chunks)
+~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py --dry-run
+
+# Inspect MCP registration
+openclaw mcp list
+openclaw mcp show cicero-memory
+
+# Restart the gateway after MCP changes (config cache)
+launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
+```
 
 ---
 

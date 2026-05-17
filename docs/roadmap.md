@@ -11,8 +11,9 @@ Cicero CLI on minerva (Mac). Local-only. Passive.
 - OpenClaw 2026.5.12, `deepseek-r1:14b` via Ollama on Apple Silicon.
 - Workspace versioned in git, symlinked into `~/.openclaw/workspace`.
 - Personality and behavioral rules in `workspace/SOUL.md`.
-- `cicero-health` and `cicero-memory` skills registered as stubs.
-- launchd agent (`ai.openclaw.gateway`), idempotent `deploy/mac/setup.sh`.
+- `cicero-health` registered as stub; `cicero-memory` backend wired with `query_cicero_memory_tool` MCP server over Chroma. Chat-side tool dispatch blocked until a tool-capable persona-compliant model is in place — see `docs/architecture.md` decision log.
+- Chroma vector memory: `cicero_memory` collection seeded from `docs/cicero-backstory.md`, served via launchd (`ai.cicero.chroma`) on `127.0.0.1:8000`. Retrieval verified from scripts and `lib/memory_query.py`.
+- launchd agents (`ai.openclaw.gateway`, `ai.cicero.chroma`), idempotent `deploy/mac/setup.sh`.
 - `cicero chat` and `cicero ask` CLI wrappers.
 
 ---
@@ -60,7 +61,7 @@ Hot memory layer: maintains a `memory.md` ≤ 100 lines that is always loaded. L
 |---|---|---|---|
 | Hot (short-term) | `self-improving` | `memory.md` ≤ 100 lines | Always, every turn |
 | Cold (long-term) | `openclawbrain` | SQLite/FTS5 graph | Bounded injection per turn |
-| Semantic (future) | `cicero-memory` (Chroma) | Vector store | On explicit search query |
+| Semantic (wired) | `cicero-memory` (Chroma + MCP) | Vector store at `~/cicero/data/chroma/` | On explicit search query (skill calls `query_cicero_memory_tool`) |
 
 Chroma remains on the roadmap as a semantic search layer over structured data (health records, garden notes, decisions). `openclawbrain` handles conversational memory and preferences. They are complementary, not redundant.
 

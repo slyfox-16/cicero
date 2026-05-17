@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C ~/.openclaw rev-parse --is-inside-work-tree)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(/Users/cicero.ortega/miniconda3/envs/cicero-memory/bin/python lib/retrieval_middleware.py)",
+      "Bash(ollama --version)",
+      "Bash(bash -n /Users/cicero.ortega/cicero/scripts/cicero)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git -C /Users/cicero.ortega/cicero diff workspace/SOUL.md deploy/mac/README.md)",
+      "Bash(git -C /Users/cicero.ortega/cicero log --oneline -3)",
+      "Bash(git -C /Users/cicero.ortega/cicero add workspace/SOUL.md deploy/mac/README.md)",
+      "Bash(git -C /Users/cicero.ortega/cicero commit -m ' *)",
+      "Bash(git -C /Users/cicero.ortega/cicero add deploy/mac/README.md)",
+      "Bash(git -C /Users/cicero.ortega/cicero add lib/memory_mcp.py workspace/skills/cicero-memory/SKILL.md)",
+      "Bash(~/miniconda3/envs/cicero-memory/bin/python scripts/ingest_memory.py --dry-run)",
+      "Bash(git -C /Users/cicero.ortega/cicero add lib/memory_mcp.py workspace/skills/cicero-memory/SKILL.md scripts/ingest_memory.py)"
+    ],
+    "additionalDirectories": [
+      "/Users/cicero.ortega/.openclaw"
+    ]
+  }
+}

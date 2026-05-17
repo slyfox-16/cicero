@@ -16,3 +16,6 @@ node_modules/
 **/node_modules/
 package-lock.json
 npm-debug.log*
+
+# Chroma vector store — binary index files, grows continuously
+data/
