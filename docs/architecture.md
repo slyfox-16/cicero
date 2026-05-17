@@ -24,8 +24,8 @@ cicero chat / cicero ask
                                 │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
                                 │
                                 ├── Ollama provider (http://127.0.0.1:11434, MLX backend)
-                                │       ├── qwen3:8b  (Q4_K_M, num_ctx 8K–16K, OLLAMA_KEEP_ALIVE=24h)  [primary]
-                                │       └── llama3.1:8b-instruct-q4_K_M  [fallback]
+                                │       ├── llama3.1:8b-instruct-q4_K_M  (Q4_K_M, OLLAMA_KEEP_ALIVE=24h)  [primary]
+                                │       └── qwen3:8b  [fallback]
                                 │
                                 ├── Workspace skills (workspace/skills/)
                                 │       ├── cicero-health  [stub — Postgres not yet wired]
@@ -99,15 +99,15 @@ cicero/
 | Gateway token | env var in launchd plist |
 | Channels | CLI only (`cicero chat`, `cicero ask`) |
 | Ollama backend | MLX (Apple Silicon) |
-| Primary model | `qwen3:8b` (Q4_K_M) |
-| Fallback model | `llama3.1:8b-instruct-q4_K_M` |
+| Primary model | `llama3.1:8b-instruct-q4_K_M` (Q4_K_M) |
+| Fallback model | `qwen3:8b` |
 | Setup script | `deploy/mac/setup.sh` (pending) |
 
 ---
 
 ## Known Limitations
 
-- **Skill routing.** Skills with prose-only SKILL.md definitions route inconsistently. Skills with real tool-call dispatch (HTTP/subprocess) route reliably. The current stubs are functional as registration and documentation artifacts; autonomous dispatch requires real implementations.
+- **Skill routing.** `cicero-health` is a stub — the SKILL.md defines behavior but there is no real HTTP/SQL dispatch behind it yet. `cicero-memory` is fully wired: MCP server (`memory_mcp.py`) → retrieval library (`memory_query.py`) → Chroma, launchd-managed. Prose-only stubs route inconsistently; real dispatch is reliable.
 - **Single agent.** Only the `main` agent is configured. Multi-agent workflows are not needed yet.
 - **No backup for `~/.openclaw`.** Session history and credentials live outside the repo. The workspace is backed by git. A `deploy/mac/backup.sh` is a future work item.
 - **iMessage deferred.** Native Apple ecosystem channel access waits on the Mac mini migration. See `docs/roadmap.md`.

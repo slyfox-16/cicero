@@ -11,7 +11,8 @@ Cicero is operational on Minerva. This is the baseline.
 - OpenClaw 2026.5.x + Ollama (MLX backend, Apple Silicon)
 - Primary model: `llama3.1:8b-instruct-q4_K_M`. Fallback: `qwen3:8b`.
 - Persona integrated — SOUL.md / IDENTITY.md injected every session
-- Skill stubs registered: cicero-health, cicero-memory
+- `cicero-health` stub registered (no backend yet)
+- `cicero-memory` fully wired: Chroma + MCP (`memory_mcp.py` → `memory_query.py`), launchd-managed
 - Chroma running on Minerva (loopback, launchd-managed)
 - CLI-only channel
 
