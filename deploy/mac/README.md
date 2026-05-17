@@ -40,42 +40,30 @@ curl -sf http://127.0.0.1:18789/
 
 ### Runtime Config Notes
 
-#### Persona persistence block (added 2026-05-16)
+#### Persona persistence (added 2026-05-16)
 
-The following block lives under the top-level `"agent"` key in `~/.openclaw/openclaw.json`.
-It is not written by `setup.sh` — add it manually after onboarding if missing:
+These keys live inside `agents.defaults` in `~/.openclaw/openclaw.json`. They are not written by `setup.sh` — merge them manually after onboarding if missing:
 
 ```json
-"agent": {
-  "persona_persistence": {
-    "mode": "enforced",
-    "reinject_interval": 3,
-    "style_check": true,
-    "drift_threshold": 0.7
-  },
-  "memory": {
-    "persona_priority": "high",
-    "context_strategy": "persona_first"
-  }
+"personaPersistence": {
+  "mode": "enforced",
+  "reinjectInterval": 3,
+  "styleCheck": true,
+  "driftThreshold": 0.7
+},
+"memory": {
+  "personaPriority": "high",
+  "contextStrategy": "personaFirst"
 }
 ```
 
-What each setting does:
-- `mode "enforced"`: OpenClaw actively monitors persona adherence across tool calls and long turns.
-- `reinject_interval 3`: SOUL.md is re-injected every 3 turns to counter context-window persona drift.
-- `style_check true`: OpenClaw checks responses for persona consistency.
-- `drift_threshold 0.7`: drift tolerance before correction fires.
-- `context_strategy "persona_first"`: SOUL.md takes precedence in the assembled system prompt.
+- `reinjectInterval 3`: SOUL.md re-injected every 3 turns to fight context-window persona drift.
+- `mode "enforced"`: active persona adherence monitoring across tool calls and long turns.
+- `contextStrategy "personaFirst"`: SOUL.md takes precedence in assembled system prompt.
 
-After adding, restart the gateway:
-```bash
-launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
-```
+After editing, restart: `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"`
 
-To verify the block is present:
-```bash
-cat ~/.openclaw/openclaw.json | python3 -c "import json,sys; c=json.load(sys.stdin); print(c.get('agent'))"
-```
+Note: the top-level key is `agents` (plural). OpenClaw rejects an `agent` (singular) key with a schema validation error.
 
 ---
 
