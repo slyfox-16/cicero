@@ -32,7 +32,9 @@ cicero/
 │   ├── cicero                         CLI wrapper: `cicero chat` / `cicero ask`
 │   └── ingest_memory.py               Idempotent ingestion of docs/cicero-backstory.md into Chroma.
 └── docs/
-    ├── architecture.md    Current design and decisions log.
+    ├── architecture.md    Current architecture and repo layout.
+    ├── decisions.md       Key architectural decisions.
+    ├── operations.md      Operational runbook for Minerva.
     ├── roadmap.md         Upcoming workstreams in priority order.
     ├── security.md        Operational discipline for running LLMs locally.
     ├── scope.md           What Cicero is and is not.
@@ -46,12 +48,6 @@ cicero/
 ```bash
 cicero chat          # TUI session (embedded local agent, no gateway needed)
 cicero ask "..."     # One-shot via gateway
-```
-
-Gateway health:
-```bash
-launchctl print "gui/$(id -u)/ai.openclaw.gateway" | head
-tail ~/Library/Logs/openclaw-gateway.err.log
 ```
 
 Restart gateway (required after openclaw.json changes):
@@ -77,31 +73,9 @@ Files in `workspace/` are read at session start and injected into the system pro
 
 **SOUL.md authoring rules:**
 - Keep language natural and descriptive, not imperative or defensive.
-- Do not use aggressive override phrasing ("CRITICAL RULE", "never reveal training") — it causes refusal behavior on deepseek-r1.
+- Do not use aggressive override phrasing ("CRITICAL RULE", "never reveal training") — it causes refusal behavior.
 - The identity line that works: `You are Cicero — a personal AI assistant. That is your name and your identity.`
-- deepseek-r1:14b respects the persona as written. No special anchoring needed.
-
-### Verifying workspace injection
-
-The session `.jsonl` log does not contain the system prompt. Check the trajectory:
-
-```bash
-python3 - <<'PY'
-import json, glob, os
-sessions = glob.glob(os.path.expanduser("~/.openclaw/agents/main/sessions/*.trajectory.jsonl"))
-latest = max(sessions, key=os.path.getmtime)
-with open(latest) as f:
-    for line in f:
-        msg = json.loads(line)
-        if msg.get("type") == "context.compiled":
-            sp = msg["data"]["systemPrompt"]
-            print("Injected:", "SOUL" in sp and "Cicero" in sp)
-            print("System prompt length:", len(sp), "chars")
-            break
-PY
-```
-
-Healthy output: `Injected: True`, length ~15-17K chars. If length is ~3-4K, workspace files are missing.
+- Some models with strong RLHF identity anchoring will override system prompt persona regardless of phrasing. Test persona compliance after any model change — see Changing the model below.
 
 ### Changing the model
 
@@ -116,9 +90,13 @@ Healthy output: `Injected: True`, length ~15-17K chars. If length is ~3-4K, work
    ```
    Expected: answers as Cicero. If it says "Qwen", "Assistant", or the model vendor — the model's RLHF training overrides persona instructions. Try a different model.
 
-**Known persona compliance:**
-- `deepseek-r1:14b` ✅ Holds Cicero identity reliably.
-- `qwen3:*` ❌ RLHF training overrides system prompt identity. Not fixable with prompt engineering.
+| Model | Persona | Tool Calls | Status |
+|---|---|---|---|
+| llama3.1:8b-instruct-q4_K_M | ✅ Working | ✅ Working | Active primary |
+| qwen3:8b | ❌ Broken | ✅ Working | RLHF overrides persona. Not usable. |
+| deepseek-r1:14b | ✅ Working | ❌ Broken | No function calling support. |
+
+A viable primary model must pass both columns. Test persona compliance AND tool call support before setting any model as primary.
 
 ### Adding or updating a skill
 
@@ -154,74 +132,6 @@ print('done')
 "
 ```
 `deploy/mac/setup.sh` removes this automatically on every run.
-
----
-
-## Common failure modes
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| Cicero answers as "Assistant" / "Qwen" / model vendor | `skipBootstrap: true` in openclaw.json | Remove it (see above) |
-| Cicero answers as "Assistant" / "Qwen" even after fix | Wrong model — RLHF identity anchoring | Switch to deepseek-r1:14b |
-| `cicero ask` hangs or errors | Gateway not running | `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"` |
-| SOUL.md edit has no effect on `cicero ask` | openclaw.json change needs restart | Restart gateway |
-| Workspace symlink wrong after worktree cleanup | Symlink pointed at worktree path | `ln -sfn ~/cicero/workspace ~/.openclaw/workspace` |
-| Onboard re-run changed default model | `openclaw onboard` auto-pulls gemma4 | Re-pin: `openclaw config get agents.defaults`, update `model.primary` |
-| `cicero ask` answers without backstory context | Chroma server down — MCP tool returns empty | `curl -fsS http://127.0.0.1:8000/api/v2/heartbeat`; `launchctl kickstart -k "gui/$(id -u)/ai.cicero.chroma"` |
-| Ingestion fails with `Could not connect to tenant` | Chroma not running or wrong port | Check `~/Library/Logs/cicero-chroma.err.log`; restart unit |
-| Agent never invokes `query_cicero_memory_tool` | MCP server unregistered or gateway cached old config | `openclaw mcp list` should show `cicero-memory`; if missing re-run `openclaw mcp set`; restart gateway |
-| MCP tool errors with `ModuleNotFoundError: mcp` | `mcp` package not in env | `uv pip install --python ~/miniconda3/envs/cicero-memory/bin/python mcp` |
-
----
-
-## Chroma vector memory
-
-The `cicero-memory` skill is backed by a local Chroma server holding semantically-chunked biographical and operational lore.
-
-| Path | Purpose |
-|---|---|
-| `~/cicero/data/chroma/` | Persistent vector store (gitignored — binary index files) |
-| `~/cicero/scripts/ingest_memory.py` | Idempotent ingestion of `docs/cicero-backstory.md` |
-| `~/cicero/lib/memory_query.py` | `query_cicero_memory(...)` library function |
-| `~/cicero/lib/memory_mcp.py` | MCP server exposing `query_cicero_memory_tool` as an agent tool |
-| `~/cicero/workspace/skills/cicero-memory/SKILL.md` | Routing prose; tells the agent when to call the MCP tool |
-| `~/Library/LaunchAgents/ai.cicero.chroma.plist` | launchd unit for the Chroma server |
-| `~/Library/Logs/cicero-chroma.{out,err}.log` | Server logs |
-
-Server runs at `127.0.0.1:8000`, collection `cicero_memory`, embeddings via `all-MiniLM-L6-v2` (384-dim, cosine). Python env: conda `cicero-memory` (3.11) with packages installed via `uv`.
-
-### Current limitation — chat cannot call the tool yet
-
-The MCP server is registered and works end-to-end from Python (`scripts/ingest_memory.py`, `lib/memory_query.py`). But the active chat model `deepseek-r1:14b` is a reasoning model and does **not** support Ollama function calling — declaring `supportsTools: true` for it in `openclaw.json` causes "provider rejected the request schema or tool payload" errors. The chat agent therefore cannot invoke `query_cicero_memory_tool` mid-session.
-
-This unblocks automatically when:
-1. A new Ollama model that holds the Cicero persona *and* supports tool calls becomes available (test with the persona compliance check in "Changing the model" above), or
-2. OpenClaw gains a way to expose MCP results to a non-tool-using model (e.g. auto-prepending top-k hits into the message context).
-
-The retrieval infrastructure is fully operational from scripts and from any tool-capable client. No action needed beyond the model swap when one is available.
-
-### Operating the server
-
-```bash
-# Health check
-curl -fsS http://127.0.0.1:8000/api/v2/heartbeat
-
-# Restart Chroma (after plist edits)
-launchctl kickstart -k "gui/$(id -u)/ai.cicero.chroma"
-
-# Re-ingest (idempotent — safe to re-run after editing the backstory)
-~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py
-
-# Dry run (no writes — prints chunks)
-~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py --dry-run
-
-# Inspect MCP registration
-openclaw mcp list
-openclaw mcp show cicero-memory
-
-# Restart the gateway after MCP changes (config cache)
-launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
-```
 
 ---
 
