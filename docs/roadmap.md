@@ -1,267 +1,176 @@
 # Roadmap
 
-Current state and what comes next. Ordered by implementation priority — quick wins first, infrastructure second, pipelines third.
+Living planning document. Reflects decided direction, known blockers, and open design questions as of 2026-05.
 
 ---
 
-## Now (stable)
+## Current State
 
-Cicero CLI on minerva (Mac). Local-only. Passive.
+Cicero is operational on Minerva. This is the baseline.
 
-- OpenClaw 2026.5.12, `deepseek-r1:14b` via Ollama on Apple Silicon.
-- Workspace versioned in git, symlinked into `~/.openclaw/workspace`.
-- Personality and behavioral rules in `workspace/SOUL.md`.
-- `cicero-health` registered as stub; `cicero-memory` backend wired with `query_cicero_memory_tool` MCP server over Chroma. Chat-side tool dispatch blocked until a tool-capable persona-compliant model is in place — see `docs/architecture.md` decision log.
-- Chroma vector memory: `cicero_memory` collection seeded from `docs/cicero-backstory.md`, served via launchd (`ai.cicero.chroma`) on `127.0.0.1:8000`. Retrieval verified from scripts and `lib/memory_query.py`.
-- launchd agents (`ai.openclaw.gateway`, `ai.cicero.chroma`), idempotent `deploy/mac/setup.sh`.
-- `cicero chat` and `cicero ask` CLI wrappers.
-
----
-
-## 1. Quick Wins — Skills and Plugins (no code required)
-
-Install order matters: `openclawbrain` first (memory foundation), then `self-improving` on top of it.
-
-### `gog` — Google Workspace CLI
-```bash
-openclaw skills install gog
-```
-Unlocks Gmail search, attachment download, and send — the delivery mechanism for all reports. Also Google Sheets if structured data needs a spreadsheet surface. OAuth setup required after install. No security concerns; review source before authenticating.
-
-### `humanizer` — AI Writing Polish
-```bash
-openclaw skills install humanizer
-```
-Post-processes written output to reduce AI-isms. Apply to all report narratives. Instruction-only, no credentials, low risk.
-
-### `openclawbrain` — Long-Term Memory Graph
-```bash
-openclaw plugins install clawhub:openclawbrain@0.2.20
-openclaw plugins enable openclawbrain
-openclaw gateway restart
-```
-Local SQLite + FTS5 graph with Ollama-backed embeddings. Bounded context injection per turn — does not bloat the prompt with full history. This is the cold memory layer. Requires OpenClaw ≥ 2026.5.2 (we are on 2026.5.12).
-
-Legacy ZIP format (pre-ClawPack); static analysis is benign, but verify the bundle before enabling: `openclaw plugins install --dry-run clawhub:openclawbrain@0.2.20`.
-
-### `self-improving` — Short-Term Memory + Self-Reflection
-```bash
-openclaw skills install self-improving
-```
-Hot memory layer: maintains a `memory.md` ≤ 100 lines that is always loaded. Logs corrections, preferences, and repeated patterns. Integrates with the heartbeat cycle.
-
-**Caution:** High-agency skill. Can permanently modify agent behavior by writing to its own memory file. Steps after install:
-1. Review `security/boundaries.md` (skill-provided).
-2. Audit `corrections.md` monthly to catch drift.
-3. Install only after `openclawbrain` is running — the two layers are designed to work together.
-
-### Memory architecture with both installed
-
-| Layer | Tool | Storage | Loaded |
-|---|---|---|---|
-| Hot (short-term) | `self-improving` | `memory.md` ≤ 100 lines | Always, every turn |
-| Cold (long-term) | `openclawbrain` | SQLite/FTS5 graph | Bounded injection per turn |
-| Semantic (wired) | `cicero-memory` (Chroma + MCP) | Vector store at `~/cicero/data/chroma/` | On explicit search query (skill calls `query_cicero_memory_tool`) |
-
-Chroma remains on the roadmap as a semantic search layer over structured data (health records, garden notes, decisions). `openclawbrain` handles conversational memory and preferences. They are complementary, not redundant.
+- OpenClaw 2026.5.x + Ollama (MLX backend, Apple Silicon)
+- Primary model: `llama3.1:8b-instruct-q4_K_M`. Fallback: `qwen3:8b`.
+- Persona integrated — SOUL.md / IDENTITY.md injected every session
+- Skill stubs registered: cicero-health, cicero-memory
+- Chroma running on Minerva (loopback, launchd-managed)
+- CLI-only channel
 
 ---
 
-## 2. Big Brain / Galaxy Brain Routing
+## Phase 5 — Documentation
 
-Cicero runs `deepseek-r1:14b` locally by default — free, private, sufficient for daily use. Complex analytical tasks (reports, financial narratives, multi-step synthesis) benefit from a more capable model. Big Brain / Galaxy Brain mode adds optional Anthropic API escalation.
+**Status:** Complete
 
-| Mode | Model | Use case |
-|---|---|---|
-| Default | `deepseek-r1:14b` (local, Ollama) | Routing, triage, simple lookups, daily use |
-| Big Brain | `claude-sonnet-4-6` (Anthropic API) | Monthly reports, bill analysis, investment summaries |
-| Galaxy Brain | `claude-opus-4-7` (Anthropic API) | Annual financial review, deep synthesis, complex multi-step tasks |
+Overhauled `docs/` to describe what Cicero currently is. Ground-truth reference, not a design journal.
 
-**Implementation:** Add `claude-sonnet-4-6` and `claude-opus-4-7` as named providers in `openclaw.json`. Expose a `--mode` flag on relevant skills and cron jobs. Default to local; escalate explicitly. Requires an Anthropic API key in the credential store (`openclaw credentials set anthropic`).
-
-This is foundational for all report-generating workstreams below — wire it before building the pipelines.
+Files in scope: architecture.md, security.md, decisions.md, scope.md, note.md, roadmap.md.  
+Excluded: cicero-backstory.md.
 
 ---
 
-## 3. Health Data Ingestion
+## Phase 6 — Big Brain Mode (Claude API Escalation)
 
-The `cicero-health` skill returns a placeholder. Real implementation:
+**Status:** Planned  
+**Depends on:** Anthropic API key configured on Minerva
 
-1. **Ingestion.** Apple Health XML export + Heavy app CSV → ETL → Postgres on Saturn. Schema: `workouts`, `sleep_sessions`, `body_metrics`. One-shot historical import, then incremental.
-2. **Query interface.** Thin wrapper (SQL or HTTP) the skill calls with a natural-language parameter.
-3. **Replace the stub.** Update `workspace/skills/cicero-health/SKILL.md` with real dispatch.
+### 1.0
 
-See `workspace/skills/cicero-health/README.md` for the full TODO list.
+- Invoked via slash command: `/bigbrain`
+- Routes that single message to Claude Sonnet via the Anthropic API
+- Returns to local model immediately after — no persistent mode change
+- Full persona (SOUL.md), all skills, all tools, and Chroma access remain active during the escalated call — behavior is identical to local model except for the underlying inference
+- Conversation history is not passed to Sonnet — single message only
+- No confirmation step required
 
----
+### 2.0 (deferred)
 
-## 4. APS Utility Bill Automation
+- Full conversation context passed to Sonnet on `/bigbrain` invocation
 
-**Goal:** Pull hourly energy consumption from the APS portal, calculate estimated vs. actual bill, trend analysis, deliver report before bill due date, log everything to Postgres.
+### Galaxy Brain — `/galaxybrain` (Opus)
 
-**Stack:** Playwright (scraping) · Python (parsing, rate plan logic) · Postgres · Dagster (scheduling) · `gog` (Gmail delivery)
+**Status:** TBD — documented future item, not part of this phase
 
-**Pipeline:**
-1. Playwright logs into APS portal, downloads hourly consumption CSV.
-2. Parse and validate; write hourly rows to Postgres (`aps_hourly_usage`).
-3. Apply APS TOU rate plan logic to compute estimated bill.
-4. Compare estimated vs. actual; compute delta.
-5. SQL window functions for MoM and YoY trends.
-6. Cicero generates report narrative (Big Brain mode).
-7. `humanizer` post-processes the narrative.
-8. `gog gmail send` delivers the report N days before bill due date.
-9. Dagster cron triggers on monthly schedule.
+- Deferred due to Opus pricing risk — no current use case justifies the cost
+- If ever implemented: single message only, no context passing, always
+- Revisit only if a concrete task arises that Sonnet cannot handle
 
-**Key risk:** APS portal layout changes break the Playwright scraper. Build with scrape-failure alerting so Cicero notifies rather than silently failing.
+### Open Design Question
 
-**Note:** Do not use the `peytoncasper/browser-automation` ClawHub skill for this — flagged as suspicious. Build the scraper directly in Playwright/Python.
+Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. Confirm Chroma and registered skills are visible to Sonnet during `/bigbrain` calls. Check openclaw.ai docs before implementing — may require explicit configuration.
 
 ---
 
-## 5. Fidelity Investment Statements → Report
+## Phase 7 — Apple ID & iMessage
 
-**Goal:** Ingest Fidelity statements, log holdings and performance data to Postgres, produce a written investment and retirement savings narrative.
+**Status:** Blocked  
+**Blocker:** Cicero requires a dedicated Apple ID before any Apple integrations can proceed. This is the critical path item for Phases 7 and 8.
 
-**Stack:** `gog gmail` or Playwright (ingestion) · pdfplumber (PDF parsing if needed) · Postgres · Cicero (narrative, Big Brain / Galaxy Brain)
+### Apple ID Setup
 
-**Pipeline:**
-1. **Ingestion — two paths:**
-   - *Email path:* `gog gmail search` for Fidelity statement emails → download CSV/PDF attachments.
-   - *Portal path:* Playwright logs into Fidelity, downloads statements.
-2. Parse holdings, cost basis, realized/unrealized gain/loss, allocation by account type (brokerage, IRA, 401k).
-3. Write to Postgres (`fidelity_holdings`, `fidelity_performance`).
-4. Cicero generates narrative: performance vs. benchmark, allocation drift, retirement savings trajectory.
-5. Deliver via Gmail (Big Brain for monthly; Galaxy Brain for annual review).
+- Account uses an iCloud email address — no external email provider
+- Google Voice number reserved for verification — pending account approval
+- Apple ID creation deferred to Mac mini migration: new device reduces Apple account trust friction
 
-**Key risk:** Fidelity detects automation and MFA may interrupt the portal path. Design a semi-automated fallback: Cicero handles analysis, manual download is triggered if scraping breaks.
+### iMessage Integration
 
-**MLflow artifact option:** Log the HTML report with interactive charts (Plotly standalone) as an MLflow artifact run. Viewable in MLflow UI on Saturn.
-
----
-
-## 6. MLflow Integrations
-
-Saturn hosts MLflow. Two patterns.
-
-### Report Artifacts
-
-Any report generated above (APS, Fidelity) can additionally be logged as an MLflow artifact — HTML with Plotly charts. Provides a versioned, browsable archive of all historical reports in the MLflow UI.
-
-### Automated Model Promotion
-
-For models trained via Dagster pipelines and logged to MLflow:
-
-1. `cicero-dagster` skill triggers the training pipeline via Dagster's API.
-2. Dagster runs hyperparameter search internally; all trials log to MLflow.
-3. `cicero-mlflow` skill reads completed runs and ranks using a **weighted Euclidean norm**:
-
-   ```yaml
-   # model_selection_config.yaml — defined per experiment
-   metrics:
-     f1:        { target: 1.0, weight: 1.5 }
-     precision: { target: 1.0, weight: 1.0 }
-     recall:    { target: 1.0, weight: 1.0 }
-     loss:      { target: 0.0, weight: 0.8 }
-   ```
-
-   Score = `sqrt(sum(w_i * (metric_i - target_i)^2))`. Lowest wins. Reproducible and auditable.
-
-4. Cicero applies a judgment layer: flags low sample counts, data freshness gaps, asymmetric metric importance for the specific model's use case.
-5. `cicero-github` skill opens a PR bumping the model version in a config file. PR description contains the metric table and Cicero's qualitative notes.
-6. Carlos reviews and merges. Promotion is gated on human approval.
+- Cicero communicates via iMessage using his dedicated Apple ID
+- Authorized senders: owner and wife only — all others ignored
+- Cicero responds only when messaged — no proactive outreach in this phase
+- OpenClaw iMessage channel enabled on Mac mini at migration time
 
 ---
 
-## 7. Proactive Agents
+## Phase 8 — Apple Reminders
 
-`workspace/cron/` is reserved. When proactive behavior is ready:
+**Status:** Planned  
+**Depends on:** Phase 7 (Apple ID)
 
-1. Wire cron jobs for report delivery schedules (APS monthly, Fidelity monthly/annual).
-2. Wire heartbeat checks: calendar, email triage, model promotion cycle.
-3. Notification channel required — iMessage on Mac (see Mac migration) or workspace memory note until then.
-4. Start with low-stakes, read-only checks before enabling anything that sends messages or modifies state.
+- Cicero is list owner of the shared chore list
+- Owner and wife are collaborators
+- Cicero can create reminders and assign them to specific collaborators
+- After adding a time-sensitive item, Cicero sends an iMessage to the assignee — intended to trigger Apple Intelligence reminder suggestion on their device
+- Grocery list and other shared lists: Cicero is collaborator only, not owner — no assignment needed
 
----
+**Out of scope for this phase:**
+- Location-based triggers
+- Time-based nudges (deferred to 2.0)
 
-## 8. iMessage Channel
+**2.0 (deferred):**
+- Time-based nudges: Cicero sends an iMessage to the assignee at a specified time for items that require it
+- Location-based triggers: explicitly out of scope, not planned
 
-Cicero is now running on minerva (Mac). The Mac migration is complete. iMessage is the next channel unlock.
-
-1. Enable iMessage via BlueBubbles or the native macOS bridge.
-2. Wire the channel in OpenClaw (`openclaw channels add imessage`).
-3. This unblocks proactive notifications — required for cron-driven heartbeats and report delivery.
-4. Start with read-only (receive only) before enabling send, per `docs/security.md`.
-
-Keep Saturn running as the data server (Postgres, MLflow, Dagster) until those workloads migrate or are confirmed unnecessary.
-
----
-
-## 9. `stock-analysis` Skill
-
-```bash
-openclaw skills install stock-analysis
-```
-
-Market data via Yahoo Finance. Portfolio benchmarking, dividend analysis, performance context for Fidelity reports.
-
-**Flagged:** The rumor scanner and Twitter/X integration components have not been reviewed. Install only after disabling those features individually. Do not enable until the Fidelity pipeline is running and there is a clear use for the data.
+**Open Design Question:**
+Which lists does Cicero own vs. collaborate on? Chore list confirmed as owner. All others TBD at implementation time.
 
 ---
 
-## Future Skills
+## Phase 9 — Postgres Integration
 
-Not started. No dependencies on the above workstreams unless noted.
+**Status:** Planned  
+**Depends on:** Data pipelines (external projects, built independently of Cicero — status TBD)
 
-- **Garden.** Track plantings, harvests, notes. Flat-file or SQLite backend.
-- **Home automation.** Read/control devices. Depends on home infra at migration time.
-- **Apple Reminders.** Mac-only via `remindctl`. Actuates — security review required before enabling.
-- **Web search.** Brave API key. Low priority while CLI-only.
+- Postgres instance running on Saturn
+- Two candidate pipelines being built separately as independent projects:
+  1. Apple Health data ingestion (Apple Health + Heavy workout app)
+  2. Personal finance data (Monarch Money)
+- Pipeline documentation will be provided when ready — Cicero skill implementation follows from that documentation
+- Cicero starts with read-only access; write access added as use cases emerge
+- `cicero-health` stub already registered — real implementation follows pipeline completion
+
+Note: pipelines are independent projects. Do not block Cicero roadmap progress on them. Treat as TBD until documentation is provided.
 
 ---
 
-## Appendix: Postgres Schema (Proposed)
+## Phase 10 — Google Calendar / iCal
 
-```sql
--- Utility
-CREATE TABLE aps_hourly_usage (
-  id            SERIAL PRIMARY KEY,
-  ts            TIMESTAMPTZ NOT NULL,
-  kwh           NUMERIC(8,4) NOT NULL,
-  ingested_at   TIMESTAMPTZ DEFAULT now()
-);
+**Status:** Planned  
+**Depends on:** Nothing blocking — setup details require definition before implementation
 
-CREATE TABLE aps_bills (
-  id                   SERIAL PRIMARY KEY,
-  billing_period_start DATE,
-  billing_period_end   DATE,
-  actual_amount        NUMERIC(10,2),
-  estimated_amount     NUMERIC(10,2),
-  delta                NUMERIC(10,2),
-  rate_plan            TEXT,
-  ingested_at          TIMESTAMPTZ DEFAULT now()
-);
+- Cicero reads both iCal (iCloud) and Google Calendar
+- Read-only to start; write access added as use cases emerge
+- Work calendar: goal is shared read access for full schedule visibility — setup details TBD
+- Wife's calendar: TBD — may be needed for chore and reminder coordination
+- Authentication: OAuth with personal Google account for Google Calendar; iCloud CalDAV for iCal
 
--- Investments
-CREATE TABLE fidelity_holdings (
-  id                  SERIAL PRIMARY KEY,
-  snapshot_date       DATE NOT NULL,
-  account_type        TEXT,           -- brokerage, ira, 401k
-  symbol              TEXT,
-  description         TEXT,
-  quantity            NUMERIC(14,4),
-  cost_basis          NUMERIC(14,2),
-  market_value        NUMERIC(14,2),
-  unrealized_gain_loss NUMERIC(14,2),
-  ingested_at         TIMESTAMPTZ DEFAULT now()
-);
+**Open Design Question:**
+Calendar setup and any required account or sharing changes need to be defined before implementation begins. Confirm whether the work calendar can be shared with read access and what that requires.
 
-CREATE TABLE fidelity_performance (
-  id              SERIAL PRIMARY KEY,
-  snapshot_date   DATE NOT NULL,
-  account_type    TEXT,
-  total_value     NUMERIC(14,2),
-  total_cost_basis NUMERIC(14,2),
-  total_gain_loss  NUMERIC(14,2),
-  ingested_at     TIMESTAMPTZ DEFAULT now()
-);
-```
+---
+
+## Phase 11 — Google Drive
+
+**Status:** Planned  
+**Depends on:** Nothing blocking
+
+- Read-only to start; write access added as use cases emerge
+- Authentication: OAuth with personal Google account
+- No specific use case defined yet — capability established for future use
+- Lowest priority integration
+
+---
+
+## Phase 12 — Mac Mini Migration
+
+**Status:** Planned  
+**Depends on:** Phase 7 (Apple ID must exist before iMessage can be enabled on the new machine)
+
+- Minerva is the current Cicero machine; Mac mini is the long-term target
+- At migration:
+  - Fresh machine setup via `deploy/mac/setup.sh` (not yet written)
+  - `brew install ollama openclaw`
+  - `ollama pull llama3.1:8b-instruct-q4_K_M`
+  - iMessage channel enabled (requires Cicero Apple ID — see Phase 7)
+  - Minerva instance decommissioned
+- What does not change: `workspace/`, skills, persona, model config
+
+---
+
+## Future / Unscheduled
+
+Items with no defined phase.
+
+- Proactive messages and scheduled reports via iMessage and/or email
+- Time-based reminder nudges (2.0 scope from Phase 8)
+- Galaxy brain mode (`/galaxybrain` via Opus) — deferred indefinitely; single message only if ever implemented, no context passing
+- Additional skills: garden, home, reminders
+- Write access to Postgres, Google Drive, Google Calendar
