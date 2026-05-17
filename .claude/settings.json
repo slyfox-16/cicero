@@ -15,7 +15,11 @@
       "Bash(git -C /Users/cicero.ortega/cicero add deploy/mac/README.md)",
       "Bash(git -C /Users/cicero.ortega/cicero add lib/memory_mcp.py workspace/skills/cicero-memory/SKILL.md)",
       "Bash(~/miniconda3/envs/cicero-memory/bin/python scripts/ingest_memory.py --dry-run)",
-      "Bash(git -C /Users/cicero.ortega/cicero add lib/memory_mcp.py workspace/skills/cicero-memory/SKILL.md scripts/ingest_memory.py)"
+      "Bash(git -C /Users/cicero.ortega/cicero add lib/memory_mcp.py workspace/skills/cicero-memory/SKILL.md scripts/ingest_memory.py)",
+      "Bash(git -C /Users/cicero.ortega/cicero status)",
+      "Bash(git -C /Users/cicero.ortega/cicero diff --stat HEAD)",
+      "Bash(git -C /Users/cicero.ortega/cicero show HEAD:.gitignore)",
+      "Bash(git -C /Users/cicero.ortega/cicero diff HEAD -- .gitignore)"
     ],
     "additionalDirectories": [
       "/Users/cicero.ortega/.openclaw"
