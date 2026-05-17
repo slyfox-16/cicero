@@ -16,7 +16,7 @@ PLIST_LABEL="ai.openclaw.gateway"
 OPENCLAW_HOME="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
-MODEL="deepseek-r1:14b"
+MODEL="mistral-nemo:latest"
 MODEL_REF="ollama/$MODEL"
 
 log() { printf '[setup] %s\n' "$*"; }
@@ -103,10 +103,13 @@ defaults.pop("skipBootstrap", None)  # ensure workspace files are injected at se
 cfg.setdefault("gateway", {}).setdefault("auth", {})
 cfg["gateway"]["auth"]["mode"] = "token"
 cfg["gateway"]["auth"]["token"] = token
+tools = cfg.setdefault("tools", {})
+tools["profile"] = "coding"
+tools["deny"] = ["canvas", "image_generate", "music_generate", "video_generate", "code_execution"]
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
-log "openclaw.json: model -> $MODEL_REF, gateway.auth.token synced, skipBootstrap removed"
+log "openclaw.json: model -> $MODEL_REF, gateway.auth.token synced, skipBootstrap removed, tools pruned"
 
 # 9. Workspace symlink
 if [ -L "$WORKSPACE_LINK" ]; then
