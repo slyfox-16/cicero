@@ -106,10 +106,14 @@ cfg["gateway"]["auth"]["token"] = token
 tools = cfg.setdefault("tools", {})
 tools["profile"] = "coding"
 tools["deny"] = ["canvas", "image_generate", "music_generate", "video_generate", "code_execution"]
+# Workaround for openclaw issue #5769: Ollama streaming drops tool_calls delta chunks.
+# streaming: false must live in params, not as a top-level field (issue #12217).
+model_params = defaults.setdefault("models", {}).setdefault(model_ref, {}).setdefault("params", {})
+model_params["streaming"] = False
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
-log "openclaw.json: model -> $MODEL_REF, gateway.auth.token synced, skipBootstrap removed, tools pruned"
+log "openclaw.json: model -> $MODEL_REF, token synced, skipBootstrap removed, tools pruned, streaming disabled"
 
 # 9. Workspace symlink
 if [ -L "$WORKSPACE_LINK" ]; then

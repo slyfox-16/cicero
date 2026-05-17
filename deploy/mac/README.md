@@ -35,3 +35,29 @@ launchctl print "gui/$(id -u)/ai.openclaw.gateway" | head
 tail ~/Library/Logs/openclaw-gateway.err.log
 curl -sf http://127.0.0.1:18789/
 ```
+
+## Known config workarounds
+
+### Streaming disabled for Ollama (openclaw issues #5769 and #12217)
+
+OpenClaw hardcodes `stream: true` on every model call. Ollama's streaming
+implementation does not emit `tool_calls` delta chunks correctly — the
+streaming response returns empty content with `finish_reason: "stop"`,
+silently dropping any tool call the model generated.
+
+**Workaround:** set `streaming: false` inside the model's `params` block.
+The top-level streaming config field is dead code (issue #12217) and has
+no effect — the fix must be in `params`.
+
+`setup.sh` applies this automatically under `agents.defaults.models.<model>.params`.
+If you ever find tool calls silently failing after a config change, verify this key:
+
+```bash
+python3 -c "
+import json, pathlib
+c = json.loads((pathlib.Path.home() / '.openclaw/openclaw.json').read_text())
+print(c.get('agents',{}).get('defaults',{}).get('models',{}))
+"
+```
+
+Expected: `{'ollama/llama3.1:8b-instruct-q5_K_M': {'params': {'streaming': False}}}`
