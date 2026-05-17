@@ -34,9 +34,10 @@ TOP_K = 3
 
 _CONTEXT_HEADER = (
     "[RETRIEVED MEMORY — inject before model call]\n"
-    "The following context was retrieved from Cicero's memory because it is "
-    "relevant to the user's question. Use it to answer accurately. "
-    "Do not fabricate details not present here.\n"
+    "The following context was retrieved from your long-term memory. "
+    "These are YOUR experiences and recollections — you are Cicero. "
+    "Respond in first person (say 'I', not 'Cicero'). "
+    "Use this to answer accurately. Do not fabricate details not present here.\n"
 )
 _CONTEXT_FOOTER = "[END RETRIEVED MEMORY]"
 
