@@ -29,7 +29,52 @@ Excluded: cicero-backstory.md.
 
 ---
 
-## Phase 6 — Big Brain Mode (Claude API Escalation)
+## Phase 6 — Security & Reliability
+
+**Status:** Planned  
+**Depends on:** Nothing blocking
+
+Security and reliability hardening before new channels and skills are added. Each new channel and skill expands the attack surface — this phase closes the gaps first.
+
+#### Tailscale
+
+- Add Minerva to Tailscale
+- Add Jupiter (personal MacBook Pro) to Tailscale
+- Add Saturn to Tailscale
+- Accessing Cicero from Jupiter: SSH into Minerva over Tailscale, run `cicero chat` or `cicero ask` from there
+- Gateway remains loopback-bound on Minerva — Tailscale handles the secure tunnel. Do not change gateway bind settings.
+- Future: Cicero may need to SSH into Saturn for skill dispatch (e.g. querying Postgres directly). Tailscale makes this possible without exposing Saturn to the public internet. Deferred until a concrete skill requires it.
+
+#### Minerva Energy Settings
+
+- Disable system sleep: Minerva must stay awake for Cicero to be reachable. Set "Prevent automatic sleeping when the display is off" in Energy settings, or via:
+  `sudo pmset -a disablesleep 1`
+- Enable restart after power failure: System Settings → Energy → "Start up automatically after a power failure"
+- Display sleep is fine — only system sleep must be disabled
+
+#### launchd Reliability Audit
+
+- Verify `KeepAlive: true` is set in both launchd plists:
+  - `ai.openclaw.gateway.plist`
+  - `ai.cicero.chroma.plist`
+- KeepAlive ensures both services restart automatically if they crash
+- Verify both units load at login (not just on demand)
+- Update `deploy/mac/setup.sh` to enforce these settings idempotently so a fresh machine setup gets them automatically
+
+#### Gateway Token Rotation
+
+- Document a procedure for rotating the gateway token in `docs/operations.md`
+- Token lives in the launchd plist environment — rotation requires updating the plist and restarting the unit
+- No rotation schedule defined yet — document the procedure now, schedule later
+
+#### Out of Scope
+
+- Docker: not needed. launchd handles service management, restart, and boot persistence natively on macOS. Docker solves a portability problem that does not exist here — Cicero is intentionally tied to specific hardware. Adds complexity with no benefit.
+- GitHub release pipeline improvements: not a reliability mechanism for the running instance. Deferred as a future CI improvement, not a reliability concern.
+
+---
+
+## Phase 7 — Big Brain Mode (Claude API Escalation)
 
 **Status:** Planned  
 **Depends on:** Anthropic API key configured on Minerva
@@ -61,10 +106,10 @@ Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. C
 
 ---
 
-## Phase 7 — Apple ID & iMessage
+## Phase 8 — Apple ID & iMessage
 
 **Status:** Blocked  
-**Blocker:** Cicero requires a dedicated Apple ID before any Apple integrations can proceed. This is the critical path item for Phases 7 and 8.
+**Blocker:** Cicero requires a dedicated Apple ID before any Apple integrations can proceed. This is the critical path item for Phases 8 and 9.
 
 ### Apple ID Setup
 
@@ -81,10 +126,10 @@ Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. C
 
 ---
 
-## Phase 8 — Apple Reminders
+## Phase 9 — Apple Reminders
 
 **Status:** Planned  
-**Depends on:** Phase 7 (Apple ID)
+**Depends on:** Phase 8 (Apple ID)
 
 - Cicero is list owner of the shared chore list
 - Owner and wife are collaborators
@@ -105,7 +150,7 @@ Which lists does Cicero own vs. collaborate on? Chore list confirmed as owner. A
 
 ---
 
-## Phase 9 — Postgres Integration
+## Phase 10 — Postgres Integration
 
 **Status:** Planned  
 **Depends on:** Data pipelines (external projects, built independently of Cicero — status TBD)
@@ -122,7 +167,7 @@ Note: pipelines are independent projects. Do not block Cicero roadmap progress o
 
 ---
 
-## Phase 10 — Google Calendar / iCal
+## Phase 11 — Google Calendar / iCal
 
 **Status:** Planned  
 **Depends on:** Nothing blocking — setup details require definition before implementation
@@ -138,7 +183,7 @@ Calendar setup and any required account or sharing changes need to be defined be
 
 ---
 
-## Phase 11 — Google Drive
+## Phase 12 — Google Drive
 
 **Status:** Planned  
 **Depends on:** Nothing blocking
@@ -150,17 +195,17 @@ Calendar setup and any required account or sharing changes need to be defined be
 
 ---
 
-## Phase 12 — Mac Mini Migration
+## Phase 13 — Mac Mini Migration
 
 **Status:** Planned  
-**Depends on:** Phase 7 (Apple ID must exist before iMessage can be enabled on the new machine)
+**Depends on:** Phase 8 (Apple ID must exist before iMessage can be enabled on the new machine)
 
 - Minerva is the current Cicero machine; Mac mini is the long-term target
 - At migration:
   - Fresh machine setup via `deploy/mac/setup.sh` (not yet written)
   - `brew install ollama openclaw`
   - `ollama pull llama3.1:8b-instruct-q4_K_M`
-  - iMessage channel enabled (requires Cicero Apple ID — see Phase 7)
+  - iMessage channel enabled (requires Cicero Apple ID — see Phase 8)
   - Minerva instance decommissioned
 - What does not change: `workspace/`, skills, persona, model config
 
@@ -171,7 +216,7 @@ Calendar setup and any required account or sharing changes need to be defined be
 Items with no defined phase.
 
 - Proactive messages and scheduled reports via iMessage and/or email
-- Time-based reminder nudges (2.0 scope from Phase 8)
+- Time-based reminder nudges (2.0 scope from Phase 9)
 - Galaxy brain mode (`/galaxybrain` via Opus) — deferred indefinitely; single message only if ever implemented, no context passing
 - Additional skills: garden, home, reminders
 - Write access to Postgres, Google Drive, Google Calendar
