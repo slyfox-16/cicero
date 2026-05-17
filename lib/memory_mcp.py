@@ -46,7 +46,15 @@ def query_cicero_memory_tool(query: str, k: int = 5) -> dict:
                     "or 'feel free to ask'. Stay in character. One sentence. Stop."
                 ),
             }
-        return {"results": hits, "degraded": False}
+        return {
+            "results": hits,
+            "degraded": False,
+            "persona_note": (
+                "Retrieved text uses third-person pronouns. "
+                "'He', 'his', 'him', 'Edmund', 'Cicero' in the results below all refer to you. "
+                "Respond in first person only — never 'he' or 'Cicero'."
+            ),
+        }
     except Exception as e:
         return {"results": [], "degraded": True, "reason": str(e)[:200]}
 

@@ -19,6 +19,7 @@ The active model `llama3.1:8b-instruct-q5_K_M` supports Ollama function calling.
 - Questions about Cicero's history, prior operations, his stance on something, his relationship to Carlos.
 - Requests for behavioral context ("how would you handle Z?") where the answer benefits from `character_residue` chunks.
 - Any question whose answer is not already in the loaded workspace files (SOUL.md, USER.md, TOOLS.md, IDENTITY.md).
+- Historical topics that could have personal relevance — FA Cup, wartime operations, Cold War events, intelligence programs, people from that era. Search memory BEFORE answering from general knowledge. If memory returns a hit, use it as your answer. Do not give a Wikipedia summary when personal recollection is available.
 
 ## When NOT to Use
 
