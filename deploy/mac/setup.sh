@@ -16,7 +16,7 @@ PLIST_LABEL="ai.openclaw.gateway"
 OPENCLAW_HOME="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
-MODEL="mistral-nemo:latest"
+MODEL="llama3.1:8b-instruct-q5_K_M"
 MODEL_REF="ollama/$MODEL"
 
 log() { printf '[setup] %s\n' "$*"; }
