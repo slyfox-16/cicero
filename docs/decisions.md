@@ -1,62 +1,33 @@
 # Architecture Decisions
 
-Decisions that are non-obvious, have future action items, or would otherwise be
-re-litigated without context. Ordered by date, newest first.
+Decisions that are non-obvious or would otherwise be re-litigated without context. Ordered by topic.
 
 ---
 
-## 2026-05-16: Memory reliability fix — four-layer approach
+## OpenClaw over a custom brain
 
-**Problem:** Cicero was hallucinating backstory answers. The model was not calling
-`query_cicero_memory_tool` when asked about biographical context.
+A custom Python/FastAPI inference loop would require maintaining channel adapters, memory serialization, and a skill runtime in perpetuity. OpenClaw already solves all of that. This repo configures an agent — personality, model, skills — it does not reimplement the platform. Less surface area is more reliable surface area.
 
-**Root causes identified:**
+## qwen3:8b as primary model
 
-1. Tool surface overload: 19+ tools exposed to a small local model caused routing
-   collapse. The model stopped dispatching tools entirely.
-2. Model regression: `mistral-nemo:12b` has a documented tool-call regression in
-   Ollama (issue #6713) — emits plain text instead of `tool_calls`.
-3. Streaming bug: OpenClaw hardcodes `stream: true`. Ollama streaming drops
-   `tool_calls` delta chunks, silently eating any tool call the model generates
-   (openclaw issue #5769). Top-level `streaming` config is dead code; the fix must
-   be in `params` (issue #12217).
+`qwen3:8b` (Q4_K_M quantization, num_ctx 8K–16K, OLLAMA_KEEP_ALIVE=24h) fits comfortably in 24GB unified memory, has strong tool-calling support, and holds the Cicero persona reliably. `llama3.1:8b-instruct-q4_K_M` is the configured fallback. Larger models were ruled out on memory headroom grounds; Q4_K_M is the right quantization tradeoff between quality and resident size.
 
-**Fixes applied:**
+## Chroma as a skill, not core memory
 
-| Layer | Fix | Commit |
-|-------|-----|--------|
-| 1 | `tools.deny` list added; pruned tool surface to ~10 visible | a443980 |
-| 2 | Switched to `llama3.1:8b-instruct-q5_K_M`; `num_ctx=12288` | b3eede0 |
-| streaming | `params.streaming=false` in `agents.defaults.models`; documented in `deploy/mac/README.md` | de37c10 |
-| 3 | `lib/retrieval_middleware.py` — conditional Auto-RAG (threshold 0.60); wired into `scripts/cicero ask` | de7af42 |
-| 4 | `/remember` slash command — deterministic bypass direct to `query_cicero_memory_tool` | 0512b2b |
+OpenClaw's built-in memory (workspace MD files, daily notes, MEMORY.md) handles preferences and short-term context. Chroma earns its place as a semantic search layer over domain data — biographical lore, health records, decision logs — too large and too structured for the workspace-file model. Keeping it a skill means it is optional, replaceable, and has a clean boundary. The backend is wired end-to-end on Minerva (server-mode chromadb, launchd-managed, loopback-only). See `docs/architecture.md` for the current implementation.
 
-**Threshold calibration (Layer 3):** Backstory queries scored 0.629–0.783; irrelevant
-queries scored 0.533–0.566. Gap of 0.063 with cutoff at 0.60. 10/10 test cases pass.
+## Git over MLflow
 
----
+The workspace is Markdown files, not model weights. Version control on configuration and personality is git's problem. MLflow solves experiment tracking for training runs; there are no training runs here.
 
-## Big Brain / Claude Sonnet Tool Calling (Future Work)
+## Workspace symlinked into repo
 
-When big brain mode is configured to use Claude Sonnet via the Anthropic API,
-the following applies:
+`~/.openclaw/workspace` is where OpenClaw reads the agent's files at runtime. `~/cicero/workspace` is the git-versioned source of truth. A symlink makes them the same directory. Edits in the repo are immediately live; no copy-on-deploy step, no divergence.
 
-- **Streaming fix does not apply to Sonnet.** The Anthropic API handles streaming
-  and tool calls correctly by design — no workaround needed on that path.
+## CLI-only channel for now
 
-- **Layer 3 middleware is path-agnostic.** The retrieval middleware runs upstream
-  of model selection (inside `scripts/cicero ask`) and works on both the local
-  Llama path and the Sonnet path without modification.
+No iMessage, Telegram, Discord, or any inbound channel is wired. The CLI (`cicero chat`, `cicero ask`) is sufficient for development. Channels add attack surface (see `docs/security.md`). iMessage is deferred until Cicero migrates to a Mac mini with native Apple ecosystem access.
 
-- **Verify MCP tool visibility on Sonnet path.** When big brain is configured,
-  confirm that the `cicero-memory` MCP server registration is visible on the
-  Sonnet agent path the same way it is on the local model path. This is an
-  OpenClaw config verification step, not an architecture change.
+## Saturn excluded from Cicero runtime
 
-- **Sonnet routes tools reliably.** `query_cicero_memory_tool` will be called
-  correctly without any of the Ollama workarounds. Tool routing should work
-  out of the box on the big brain path.
-
-**Action required when building big brain:** verify MCP tool visibility on the
-Sonnet path and confirm tool calls fire correctly on a single test turn before
-considering the feature complete.
+Saturn hosts other services (MLflow, Postgres, Figma, Dagster). Clean separation is maintained: Cicero runs entirely on Minerva. No Cicero component — gateway, Ollama, Chroma, workspace — touches Saturn.

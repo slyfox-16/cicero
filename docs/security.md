@@ -1,6 +1,6 @@
 # Security
 
-Operational discipline for running OpenClaw on Saturn.
+Operational discipline for running OpenClaw on Minerva.
 
 ---
 
@@ -8,14 +8,14 @@ Operational discipline for running OpenClaw on Saturn.
 
 Cicero runs a local LLM against content that will eventually arrive from external surfaces — iMessage, email, structured data ingested from external services. Prompt injection is a real attack surface. A message crafted to override Cicero's instructions could, in principle, cause it to exfiltrate data, run unintended commands, or impersonate Carlos in outbound channels.
 
-Current risk is low: Saturn is CLI-only, no inbound channels, no data ingestion yet. The threat grows with each channel and skill added.
+Current risk is low: Minerva is CLI-only, no inbound channels, no data ingestion yet. The threat grows with each channel and skill added.
 
 ---
 
 ## Rules
 
 **1. Do not install community skills without reading the source.**
-Skills execute with OpenClaw's permissions — that is, your user account's permissions on Saturn. A malicious or poorly-written skill can read files, make network calls, or run arbitrary code. ClawHub is an ecosystem of third-party contributions. Treat it like untrusted code.
+Skills execute with OpenClaw's permissions — that is, your user account's permissions on Minerva. A malicious or poorly-written skill can read files, make network calls, or run arbitrary code. ClawHub is an ecosystem of third-party contributions. Treat it like untrusted code.
 
 **2. Pin OpenClaw versions. Review release notes before upgrading.**
 The upgrade from 2026.2.13 → 2026.5.7 was intentional and inspected. Do not let `setup.sh` auto-update in production. A breaking change in the agent runtime, the workspace file format, or the skill SDK requires deliberate testing, not silent background pulls.
@@ -24,7 +24,7 @@ The upgrade from 2026.2.13 → 2026.5.7 was intentional and inspected. Do not le
 Read-only skills (health data lookup, memory search) have limited blast radius. Skills that send messages, modify files, interact with home automation, or post to any external service are actuators — they deserve the same scrutiny as production deployments.
 
 **4. The gateway is bound to loopback. Keep it that way.**
-`openclaw.json` sets `gateway.bind: loopback`. The gateway token in the systemd unit is a second layer. Exposing the gateway to LAN or the internet without a VPN, mTLS, or equivalent protection would be a material risk increase. If remote access is needed, route through Tailscale and leave the bind as-is.
+`openclaw.json` sets `gateway.bind: loopback`. The gateway token in the launchd plist is a second layer. Exposing the gateway to LAN or the internet without a VPN, mTLS, or equivalent protection would be a material risk increase. If remote access is needed, route through Tailscale and leave the bind as-is.
 
 **5. No secrets in workspace files.**
 Workspace files are versioned in git. API keys, credentials, and tokens must not appear in `SOUL.md`, `TOOLS.md`, `USER.md`, or any other workspace file. Use OpenClaw's credential store (`openclaw credentials`) or environment variables injected at runtime.

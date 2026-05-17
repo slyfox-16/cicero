@@ -1,38 +1,6 @@
 # Cicero Architecture
 
-Cicero is a personal AI assistant running as an OpenClaw agent on minerva (Mac). The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the inference loop, channel layer, memory system, and skill runtime.
-
----
-
-## Decisions Log
-
-### Why Path A: OpenClaw, not a custom brain
-
-A custom Python/FastAPI brain meant maintaining an inference loop, channel adapters, memory serialization, and a skill runtime in perpetuity. OpenClaw already solves all of that. The repo's job is to configure the agent — personality, model, skills — not to reimplement the platform. Less surface area is more reliable surface area.
-
-### Why deepseek-r1:14b
-
-Originally deployed with `qwen3:8b` on Saturn (GTX 1080, 8GB VRAM). After migrating to minerva (Apple Silicon, unified memory), `qwen3:30b-a3b` was available but failed to hold the Cicero persona on direct identity questions — its RLHF training overrides system prompt persona instructions. `deepseek-r1:14b` (9 GB) respects persona instructions reliably, has strong tool-calling support (`compat.supportsTools: true`), and fits comfortably in Apple Silicon unified memory. The R1 reasoning approach lets the model actively apply workspace instructions rather than defaulting to base training identity.
-
-### Why Chroma is a skill, not core memory
-
-OpenClaw's built-in memory (workspace MD files, daily notes, MEMORY.md) handles preferences and short-term context. Chroma earns its place as a semantic search layer over structured data — health records, garden notes, decision logs — that is too large and too structured for the workspace-file model. Keeping it a skill means it is optional, replaceable, and has a clean boundary.
-
-**2026-05-16 update.** Backend wired end-to-end. Server-mode chromadb on `127.0.0.1:8000` (launchd-managed `ai.cicero.chroma`), single collection `cicero_memory`, deterministic SHA-256 IDs for upsert. The `cicero-memory` skill is configured to route to the `query_cicero_memory_tool` MCP tool (registered via `openclaw mcp set`), backed by `lib/memory_mcp.py` → `lib/memory_query.py`. Backstory (`docs/cicero-backstory.md`) is the seed corpus; future workstreams will add health digests and decision logs.
-
-**Open gap: tool dispatch from the chat agent.** `deepseek-r1:14b` is a reasoning model and does not support Ollama function calling — attempts to enable tools for it produce "provider rejected the request schema or tool payload" errors. The chat agent therefore cannot invoke the MCP tool mid-session today. Retrieval works fully from scripts and direct Python invocation. The skill's SKILL.md documents the fallback behavior (answer from loaded workspace files). This unblocks the day a tool-capable model that also holds the Cicero persona is available.
-
-### Why git replaces MLflow
-
-The workspace is Markdown files, not model weights. Version control on configuration and personality is git's problem. MLflow solves experiment tracking for training runs. There are no training runs here.
-
-### Why symlink the workspace into the repo
-
-`~/.openclaw/workspace` is where OpenClaw reads the agent's files at runtime. `~/cicero/workspace` is the git-versioned source of truth. A symlink makes them the same directory. Edits in the repo are immediately live; OpenClaw never diverges from what's committed.
-
-### Why CLI-only for now
-
-No Telegram, Discord, iMessage, or any channel is wired. Saturn is a headless Linux box used for personal compute. The CLI (`openclaw agent --agent main --message "..."`) is sufficient for early development. Channels add attack surface (see `security.md`). iMessage will come when Cicero migrates to a Mac mini that has native Apple ecosystem access.
+Cicero is a personal AI assistant running as an OpenClaw agent on Minerva (MacBook Pro M4 Pro, 24GB unified memory, Apple Silicon). The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the inference loop, channel layer, memory system, and skill runtime.
 
 ---
 
@@ -55,8 +23,9 @@ cicero chat / cicero ask
                                 │       ├── Injects loaded skill descriptions into system prompt
                                 │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
                                 │
-                                ├── Ollama provider (http://127.0.0.1:11434)
-                                │       └── deepseek-r1:14b  (~9GB unified memory)
+                                ├── Ollama provider (http://127.0.0.1:11434, MLX backend)
+                                │       ├── qwen3:8b  (Q4_K_M, num_ctx 8K–16K, OLLAMA_KEEP_ALIVE=24h)  [primary]
+                                │       └── llama3.1:8b-instruct-q4_K_M  [fallback]
                                 │
                                 ├── Workspace skills (workspace/skills/)
                                 │       ├── cicero-health  [stub — Postgres not yet wired]
@@ -75,7 +44,7 @@ cicero chat / cicero ask
                                         Collection: cicero_memory (all-MiniLM-L6-v2, 384-dim)
 ```
 
-Data stays on minerva. No outbound traffic except Ollama inference calls (localhost).
+All inference and data remain on Minerva. No outbound traffic.
 
 ---
 
@@ -90,33 +59,30 @@ cicero/
 │   ├── AGENTS.md           Workspace conventions and memory rules.
 │   ├── USER.md             Context about Carlos.
 │   ├── TOOLS.md            Environment-specific notes (hostnames, devices).
-│   ├── HEARTBEAT.md        Periodic task checklist (empty — Cicero is passive now).
-│   ├── skills/             Workspace-level skill files (auto-discovered by OpenClaw).
-│   │   ├── cicero-health/  Stub. Pending health data ingestion workstream.
-│   │   └── cicero-memory/  Routes to query_cicero_memory_tool MCP server.
-│   └── cron/               Reserved for future proactive agents. Empty now.
+│   ├── HEARTBEAT.md        Periodic task checklist (passive — no active tasks yet).
+│   └── skills/             Workspace-level skill files (auto-discovered by OpenClaw).
+│       ├── cicero-health/  Stub. Pending health data ingestion workstream.
+│       └── cicero-memory/  Routes to query_cicero_memory_tool MCP server.
 │
 ├── lib/                       Importable Python modules + MCP servers.
 │   ├── memory_query.py        query_cicero_memory() — semantic retrieval over Chroma.
 │   └── memory_mcp.py          MCP server exposing query_cicero_memory_tool to the agent.
 │
 ├── scripts/
-│   ├── cicero                 CLI wrapper.
+│   ├── cicero                 CLI wrapper (cicero chat / cicero ask).
 │   └── ingest_memory.py       Idempotent ingestion of cicero-backstory.md into Chroma.
 │
 ├── data/                      [gitignored] Chroma vector store. Local-only.
 │   └── chroma/
 │
 ├── deploy/
-│   ├── saturn/
-│   │   ├── openclaw-gateway.service   Systemd user unit (OPENCLAW_GATEWAY_TOKEN templated).
-│   │   └── setup.sh                   Idempotent installer. Generates token on first run,
-│   │                                  syncs it into openclaw.json, starts the service.
 │   └── mac/
-│       └── README.md                  Placeholder for the Mac mini migration.
+│       ├── setup.sh                   [pending] Idempotent Mac installer.
+│       └── ai.openclaw.gateway.plist  launchd unit template (gateway token templated).
 │
 └── docs/
     ├── architecture.md    This file.
+    ├── decisions.md       Key architectural decisions.
     ├── security.md        Operational discipline for running LLMs locally.
     ├── roadmap.md         What comes next.
     └── scope.md           What Cicero is and is not.
@@ -126,24 +92,22 @@ cicero/
 
 ## Deploy
 
-| Component | minerva (current) | Saturn (legacy) |
-|-----------|-------------------|-----------------|
-| Machine | Mac mini, Apple Silicon | Linux, GTX 1080 |
-| Service manager | launchd user agent | systemd user unit |
-| Package manager | Homebrew + npm | npm global (sudo) |
-| Gateway token | env var in launchd plist | env var in systemd unit |
-| Channels | none (CLI only) | none (CLI only) |
-| Ollama | Apple Silicon unified memory | GTX 1080, 8GB VRAM |
-| Model | `deepseek-r1:14b` | `qwen3:8b` |
-| Setup script | `deploy/mac/setup.sh` | `deploy/saturn/setup.sh` |
-
-Both setup scripts are idempotent. `deploy/mac/setup.sh` is the active install path.
+| Component | Minerva |
+|-----------|---------|
+| Machine | MacBook Pro M4 Pro, 24GB unified memory, Apple Silicon |
+| Service manager | launchd user agent |
+| Gateway token | env var in launchd plist |
+| Channels | CLI only (`cicero chat`, `cicero ask`) |
+| Ollama backend | MLX (Apple Silicon) |
+| Primary model | `qwen3:8b` (Q4_K_M) |
+| Fallback model | `llama3.1:8b-instruct-q4_K_M` |
+| Setup script | `deploy/mac/setup.sh` (pending) |
 
 ---
 
-## Known Limitations and Open Questions
+## Known Limitations
 
-- **Skill routing.** Skills with prose-only SKILL.md definitions route inconsistently. Skills with real tool-call dispatch (HTTP/subprocess) route more reliably. The stubs are functional as documentation and registration artifacts.
-- **deepseek-r1 thinking blocks.** The model emits `<think>...</think>` reasoning before responses. OpenClaw suppresses these in TUI output; they are visible in raw trajectory logs. No action needed unless verbosity becomes a problem.
-- **Single agent.** Only the `main` agent is configured. Multi-agent workflows are possible in OpenClaw but not yet needed.
-- **No backup strategy for ~/.openclaw.** Session history and credentials live outside the repo. The workspace is backed by git. A future `deploy/mac/backup.sh` should handle the rest.
+- **Skill routing.** Skills with prose-only SKILL.md definitions route inconsistently. Skills with real tool-call dispatch (HTTP/subprocess) route reliably. The current stubs are functional as registration and documentation artifacts; autonomous dispatch requires real implementations.
+- **Single agent.** Only the `main` agent is configured. Multi-agent workflows are not needed yet.
+- **No backup for `~/.openclaw`.** Session history and credentials live outside the repo. The workspace is backed by git. A `deploy/mac/backup.sh` is a future work item.
+- **iMessage deferred.** Native Apple ecosystem channel access waits on the Mac mini migration. See `docs/roadmap.md`.
