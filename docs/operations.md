@@ -28,6 +28,26 @@ Healthy output: `Injected: True`, length ~15-17K chars. If length is ~3-4K, work
 
 ---
 
+## Gateway token rotation
+
+The gateway token authenticates requests to the OpenClaw gateway. It lives in `~/.openclaw/openclaw.json` and in `~/Library/LaunchAgents/ai.openclaw.gateway.plist`.
+
+**Automatic rotation** runs every 6 months via launchd (`ai.cicero.token-rotate`): January 1 and July 1 at 03:00. Logs go to `~/Library/Logs/cicero-token-rotate.{out,err}.log`.
+
+**Manual rotation** (use if the token is ever exposed):
+```bash
+bash ~/cicero/scripts/rotate_token.sh
+```
+
+The script generates a new 48-hex-character token, updates `openclaw.json`, re-renders the gateway plist, and restarts the gateway. The gateway is back up within a few seconds.
+
+To verify the rotation job is loaded:
+```bash
+launchctl print "gui/$(id -u)/ai.cicero.token-rotate"
+```
+
+---
+
 ## Common failure modes
 
 | Symptom | Cause | Fix |

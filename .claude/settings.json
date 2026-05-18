@@ -19,10 +19,12 @@
       "Bash(git -C /Users/cicero.ortega/cicero status)",
       "Bash(git -C /Users/cicero.ortega/cicero diff --stat HEAD)",
       "Bash(git -C /Users/cicero.ortega/cicero show HEAD:.gitignore)",
-      "Bash(git -C /Users/cicero.ortega/cicero diff HEAD -- .gitignore)"
+      "Bash(git -C /Users/cicero.ortega/cicero diff HEAD -- .gitignore)",
+      "Bash(sed -e \"s|__HOME__|$HOME|g\" ~/cicero/deploy/mac/ai.cicero.token-rotate.plist > ~/Library/LaunchAgents/ai.cicero.token-rotate.plist && launchctl bootstrap \"gui/$\\(id -u\\)\" ~/Library/LaunchAgents/ai.cicero.token-rotate.plist 2>&1 || echo \"already loaded or bootstrap failed\")"
     ],
     "additionalDirectories": [
-      "/Users/cicero.ortega/.openclaw"
+      "/Users/cicero.ortega/.openclaw",
+      "/Users/cicero.ortega/Library/LaunchAgents"
     ]
   }
 }

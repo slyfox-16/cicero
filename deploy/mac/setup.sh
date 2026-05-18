@@ -13,6 +13,12 @@ WORKSPACE="$REPO_ROOT/workspace"
 PLIST_SRC="$REPO_ROOT/deploy/mac/ai.openclaw.gateway.plist"
 PLIST_DST="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"
 PLIST_LABEL="ai.openclaw.gateway"
+CHROMA_PLIST_SRC="$REPO_ROOT/deploy/mac/ai.cicero.chroma.plist"
+CHROMA_PLIST_DST="$HOME/Library/LaunchAgents/ai.cicero.chroma.plist"
+CHROMA_PLIST_LABEL="ai.cicero.chroma"
+ROTATE_PLIST_SRC="$REPO_ROOT/deploy/mac/ai.cicero.token-rotate.plist"
+ROTATE_PLIST_DST="$HOME/Library/LaunchAgents/ai.cicero.token-rotate.plist"
+ROTATE_PLIST_LABEL="ai.cicero.token-rotate"
 OPENCLAW_HOME="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
@@ -172,7 +178,48 @@ if [ "$needs_bootstrap" -eq 1 ]; then
     || warn "launchctl bootstrap returned non-zero (may already be loaded)"
 fi
 
-# 11. cicero CLI wrapper
+# 11. Chroma launchd plist
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+tmp_chroma="$(mktemp)"
+sed -e "s|__HOME__|$HOME|g" "$CHROMA_PLIST_SRC" > "$tmp_chroma"
+chroma_needs_bootstrap=0
+if [ ! -f "$CHROMA_PLIST_DST" ]; then
+  chroma_needs_bootstrap=1
+  mv "$tmp_chroma" "$CHROMA_PLIST_DST"
+  log "installed chroma launchd plist"
+elif ! cmp -s "$tmp_chroma" "$CHROMA_PLIST_DST"; then
+  mv "$tmp_chroma" "$CHROMA_PLIST_DST"
+  log "refreshed chroma launchd plist (content changed)"
+else
+  rm -f "$tmp_chroma"
+  log "chroma launchd plist already up to date"
+fi
+if [ "$chroma_needs_bootstrap" -eq 1 ]; then
+  launchctl bootstrap "gui/$(id -u)" "$CHROMA_PLIST_DST" 2>/dev/null \
+    || warn "launchctl bootstrap chroma returned non-zero (may already be loaded)"
+fi
+
+# 11a. Token-rotate launchd plist
+tmp_rotate="$(mktemp)"
+sed -e "s|__HOME__|$HOME|g" "$ROTATE_PLIST_SRC" > "$tmp_rotate"
+rotate_needs_bootstrap=0
+if [ ! -f "$ROTATE_PLIST_DST" ]; then
+  rotate_needs_bootstrap=1
+  mv "$tmp_rotate" "$ROTATE_PLIST_DST"
+  log "installed token-rotate launchd plist"
+elif ! cmp -s "$tmp_rotate" "$ROTATE_PLIST_DST"; then
+  mv "$tmp_rotate" "$ROTATE_PLIST_DST"
+  log "refreshed token-rotate launchd plist (content changed)"
+else
+  rm -f "$tmp_rotate"
+  log "token-rotate launchd plist already up to date"
+fi
+if [ "$rotate_needs_bootstrap" -eq 1 ]; then
+  launchctl bootstrap "gui/$(id -u)" "$ROTATE_PLIST_DST" 2>/dev/null \
+    || warn "launchctl bootstrap token-rotate returned non-zero (may already be loaded)"
+fi
+
+# 13. cicero CLI wrapper
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 ln -sfn "$REPO_ROOT/scripts/cicero" "$LOCAL_BIN/cicero"
@@ -182,7 +229,7 @@ if ! grep -q 'HOME/.local/bin' "$HOME/.zshrc" 2>/dev/null; then
   log "added ~/.local/bin to PATH in .zshrc"
 fi
 
-# 12. Kickstart and probe
+# 14. Kickstart and probe
 launchctl kickstart -k "gui/$(id -u)/$PLIST_LABEL" >/dev/null 2>&1 || true
 sleep 2
 if nc -z 127.0.0.1 18789 2>/dev/null; then

@@ -12,6 +12,54 @@ Current risk is low: Minerva is CLI-only, no inbound channels, no data ingestion
 
 ---
 
+## Current Setup
+
+| Control | What it does |
+|---|---|
+| Tailscale | Minerva, Jupiter, and Saturn are on a private Tailscale network. All remote access to Cicero routes through Tailscale — no public internet exposure. |
+| Gateway: loopback-bound | The OpenClaw gateway listens on `127.0.0.1:18789` only. Not reachable from LAN or the internet. |
+| Gateway: token auth | Every request to the gateway must include the bearer token set in `OPENCLAW_GATEWAY_TOKEN`. Token is 48 hex characters (192 bits). |
+| Gateway: token rotation | Token is rotated automatically every 6 months (Jan 1 and Jul 1 at 03:00) by the `ai.cicero.token-rotate` launchd job. Manual rotation takes ~5 seconds — see below. |
+| Chroma: loopback-bound | The vector memory server listens on `127.0.0.1:8000` only. Telemetry disabled (`ANONYMIZED_TELEMETRY=False`). |
+| launchd: KeepAlive | Both `ai.openclaw.gateway` and `ai.cicero.chroma` have `KeepAlive: true` — they restart automatically on crash and load at login. |
+| Workspace: git-versioned | All workspace files are in this repo. No credentials or tokens in workspace files. |
+
+---
+
+## Gateway Token Rotation
+
+The gateway token authenticates all requests to the OpenClaw gateway. Rotate it if the token is ever exposed (e.g., appeared in a log, screenshot, or was committed to git).
+
+**Automatic rotation** runs every 6 months via the `ai.cicero.token-rotate` launchd job. No action needed.
+
+**Manual rotation:**
+
+```bash
+bash ~/cicero/scripts/rotate_token.sh
+```
+
+The script:
+1. Generates a new 48-hex-character token
+2. Updates `~/.openclaw/openclaw.json`
+3. Re-renders `~/Library/LaunchAgents/ai.openclaw.gateway.plist` with the new token
+4. Restarts the gateway
+
+The gateway is back up within a few seconds. To confirm:
+
+```bash
+nc -zv 127.0.0.1 18789
+```
+
+To check rotation job status:
+
+```bash
+launchctl print "gui/$(id -u)/ai.cicero.token-rotate"
+# Rotation log:
+tail ~/Library/Logs/cicero-token-rotate.out.log
+```
+
+---
+
 ## Rules
 
 **1. Do not install community skills without reading the source.**
