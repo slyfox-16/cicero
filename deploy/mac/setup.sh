@@ -114,7 +114,7 @@ with open(path) as f:
 defaults = cfg.setdefault("agents", {}).setdefault("defaults", {})
 model_cfg = defaults.setdefault("model", {})
 model_cfg["primary"] = model_ref
-model_cfg["fallback"] = fallback_ref
+model_cfg.pop("fallback", None)  # openclaw does not support a fallback key in model config
 defaults.pop("skipBootstrap", None)  # ensure workspace files are injected at session start
 cfg.setdefault("gateway", {}).setdefault("auth", {})
 cfg["gateway"]["auth"]["mode"] = "token"

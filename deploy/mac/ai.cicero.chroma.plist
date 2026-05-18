@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.cicero.chroma</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HOME__/miniconda3/envs/cicero-memory/bin/chroma</string>
+        <string>run</string>
+        <string>--path</string>
+        <string>__HOME__/cicero/data/chroma</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>8000</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__HOME__/cicero</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>__HOME__/miniconda3/envs/cicero-memory/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>ANONYMIZED_TELEMETRY</key>
+        <string>False</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/cicero-chroma.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/cicero-chroma.err.log</string>
+</dict>
+</plist>
