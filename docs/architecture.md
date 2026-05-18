@@ -24,8 +24,8 @@ cicero chat / cicero ask
                                 │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
                                 │
                                 ├── Ollama provider (http://127.0.0.1:11434, MLX backend)
-                                │       ├── llama3.1:8b-instruct-q4_K_M  (Q4_K_M, OLLAMA_KEEP_ALIVE=24h)  [primary]
-                                │       └── qwen3:8b  [fallback]
+                                │       ├── qwen3:8b  [primary]
+                                │       └── llama3.1:8b-instruct-q5_K_M  [fallback]
                                 │
                                 ├── Workspace skills (workspace/skills/)
                                 │       ├── cicero-health  [stub — Postgres not yet wired]
@@ -99,8 +99,8 @@ cicero/
 | Gateway token | env var in launchd plist |
 | Channels | CLI only (`cicero chat`, `cicero ask`) |
 | Ollama backend | MLX (Apple Silicon) |
-| Primary model | `llama3.1:8b-instruct-q4_K_M` (Q4_K_M) |
-| Fallback model | `qwen3:8b` |
+| Primary model | `qwen3:8b` |
+| Fallback model | `llama3.1:8b-instruct-q5_K_M` |
 | Setup script | `deploy/mac/setup.sh` (pending) |
 
 ---

@@ -53,7 +53,7 @@ launchctl print "gui/$(id -u)/ai.cicero.token-rotate"
 | Symptom | Cause | Fix |
 |---|---|---|
 | Cicero answers as "Assistant" / "Qwen" / model vendor | `skipBootstrap: true` in openclaw.json | Remove it (see above) |
-| Cicero answers as "Assistant" / "Qwen" even after fix | Wrong model — RLHF identity anchoring | Switch to deepseek-r1:14b |
+| Cicero answers as "Assistant" / vendor name even after fix | Wrong model — strong RLHF identity anchoring | Check `openclaw config get agents.defaults` → verify `model.primary` is `ollama/qwen3:8b` |
 | `cicero ask` hangs or errors | Gateway not running | `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"` |
 | SOUL.md edit has no effect on `cicero ask` | openclaw.json change needs restart | Restart gateway |
 | Workspace symlink wrong after worktree cleanup | Symlink pointed at worktree path | `ln -sfn ~/cicero/workspace ~/.openclaw/workspace` |
@@ -72,7 +72,7 @@ The `cicero-memory` skill is backed by a local Chroma server holding semanticall
 | Path | Purpose |
 |---|---|
 | `~/cicero/data/chroma/` | Persistent vector store (gitignored — binary index files) |
-| `~/cicero/scripts/ingest_memory.py` | Idempotent ingestion of `docs/cicero-backstory.md` |
+| `~/cicero/scripts/ingest_memory.py` | Idempotent ingestion of `docs/archive/cicero-backstory.md` |
 | `~/cicero/lib/memory_query.py` | `query_cicero_memory(...)` library function |
 | `~/cicero/lib/memory_mcp.py` | MCP server exposing `query_cicero_memory_tool` as an agent tool |
 | `~/cicero/workspace/skills/cicero-memory/SKILL.md` | Routing prose; tells the agent when to call the MCP tool |
@@ -80,16 +80,6 @@ The `cicero-memory` skill is backed by a local Chroma server holding semanticall
 | `~/Library/Logs/cicero-chroma.{out,err}.log` | Server logs |
 
 Server runs at `127.0.0.1:8000`, collection `cicero_memory`, embeddings via `all-MiniLM-L6-v2` (384-dim, cosine). Python env: conda `cicero-memory` (3.11) with packages installed via `uv`.
-
-### Current limitation — chat cannot call the tool yet
-
-The MCP server is registered and works end-to-end from Python (`scripts/ingest_memory.py`, `lib/memory_query.py`). But the active chat model `deepseek-r1:14b` is a reasoning model and does **not** support Ollama function calling — declaring `supportsTools: true` for it in `openclaw.json` causes "provider rejected the request schema or tool payload" errors. The chat agent therefore cannot invoke `query_cicero_memory_tool` mid-session.
-
-This unblocks automatically when:
-1. A new Ollama model that holds the Cicero persona *and* supports tool calls becomes available (test with the persona compliance check in "Changing the model" above), or
-2. OpenClaw gains a way to expose MCP results to a non-tool-using model (e.g. auto-prepending top-k hits into the message context).
-
-The retrieval infrastructure is fully operational from scripts and from any tool-capable client. No action needed beyond the model swap when one is available.
 
 ### Operating the server
 

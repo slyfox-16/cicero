@@ -20,11 +20,39 @@
       "Bash(git -C /Users/cicero.ortega/cicero diff --stat HEAD)",
       "Bash(git -C /Users/cicero.ortega/cicero show HEAD:.gitignore)",
       "Bash(git -C /Users/cicero.ortega/cicero diff HEAD -- .gitignore)",
-      "Bash(sed -e \"s|__HOME__|$HOME|g\" ~/cicero/deploy/mac/ai.cicero.token-rotate.plist > ~/Library/LaunchAgents/ai.cicero.token-rotate.plist && launchctl bootstrap \"gui/$\\(id -u\\)\" ~/Library/LaunchAgents/ai.cicero.token-rotate.plist 2>&1 || echo \"already loaded or bootstrap failed\")"
+      "Bash(sed -e \"s|__HOME__|$HOME|g\" ~/cicero/deploy/mac/ai.cicero.token-rotate.plist > ~/Library/LaunchAgents/ai.cicero.token-rotate.plist && launchctl bootstrap \"gui/$\\(id -u\\)\" ~/Library/LaunchAgents/ai.cicero.token-rotate.plist 2>&1 || echo \"already loaded or bootstrap failed\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('agents', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(openclaw tools *)",
+      "Bash(openclaw help *)",
+      "Bash(xargs ls -la)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(list\\(d.keys\\(\\)\\), indent=2\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -)",
+      "Bash(find /usr/local /opt/homebrew -name \"openclaw\" 2>/dev/null | head -5; which openclaw)",
+      "Read(//usr/local/**)",
+      "Bash(find /opt/homebrew/lib/node_modules/openclaw -name \"*.js\" | xargs grep -l \"web_search\\\\|brave\\\\|tavily\\\\|tool.*profile\\\\|profile.*tool\" 2>/dev/null | head -10)",
+      "Read(//opt/homebrew/lib/node_modules/openclaw/**)",
+      "Bash(find /opt/homebrew/lib/node_modules/openclaw -name \"*.js\" | xargs grep -l '\"coding\"\\\\|\"general\"\\\\|\"default\"' 2>/dev/null | head -5)",
+      "Bash(grep -o '\"coding\".\\\\{0,200\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/configure-BZAw6yTl.js)",
+      "Bash(grep -o '\"duckduckgo\"[^}]\\\\{0,300\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/plugin-auto-enable-DLIxCAM0.js)",
+      "Bash(openclaw plugin *)",
+      "Bash(grep -o '\"coding\"[^}]\\\\{0,500\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/configure-BZAw6yTl.js)",
+      "Bash(grep -o '\"webSearch\"[^}]\\\\{0,200\\\\}\\\\|webSearch[^,]\\\\{0,200\\\\}profiles[^}]\\\\{0,100\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/tool-policy-shared-CnnYZoj3.js)",
+      "Bash(grep -o 'profiles[^}]\\\\{0,100\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/tool-policy-shared-CnnYZoj3.js)",
+      "Bash(grep -o 'profiles:\\\\s*\\\\[\\\\][^,]\\\\{0,300\\\\}' /opt/homebrew/lib/node_modules/openclaw/dist/tool-policy-shared-CnnYZoj3.js)",
+      "Bash(node -e ' *)",
+      "Bash(mkdir -p /Users/cicero.ortega/cicero/docs/archive)",
+      "Bash(launchctl unload *)",
+      "Bash(launchctl load *)",
+      "Bash(curl -s http://127.0.0.1:8000/api/v1/heartbeat)",
+      "Bash(curl -s http://127.0.0.1:8000/api/v2/heartbeat)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "/Users/cicero.ortega/.openclaw",
-      "/Users/cicero.ortega/Library/LaunchAgents"
+      "/Users/cicero.ortega/Library/LaunchAgents",
+      "/Users/cicero.ortega/cicero/docs"
     ]
   }
 }

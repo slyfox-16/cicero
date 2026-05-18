@@ -30,7 +30,7 @@ cicero/
 │   └── saturn/                        Legacy Linux deploy. Not the active path.
 ├── scripts/
 │   ├── cicero                         CLI wrapper: `cicero chat` / `cicero ask`
-│   └── ingest_memory.py               Idempotent ingestion of docs/cicero-backstory.md into Chroma.
+│   └── ingest_memory.py               Idempotent ingestion of docs/archive/cicero-backstory.md into Chroma.
 └── docs/
     ├── architecture.md    Current architecture and repo layout.
     ├── decisions.md       Key architectural decisions.
@@ -38,7 +38,9 @@ cicero/
     ├── roadmap.md         Upcoming workstreams in priority order.
     ├── security.md        Operational discipline for running LLMs locally.
     ├── scope.md           What Cicero is and is not.
-    └── cicero-backstory.md  Seed corpus for the cicero-memory vector store.
+    └── archive/
+        ├── cicero-backstory.md  Seed corpus for the cicero-memory vector store.
+        └── persona.md           ADR: Cicero character persona — end of life.
 ```
 
 ---
@@ -75,8 +77,6 @@ Files in `workspace/` are read at session start and injected into the system pro
 - Keep language natural and descriptive, not imperative or defensive.
 - Do not use aggressive override phrasing ("CRITICAL RULE", "never reveal training") — it causes refusal behavior.
 - The identity line that works: `You are Cicero — a personal AI assistant. That is your name and your identity.`
-- Some models with strong RLHF identity anchoring will override system prompt persona regardless of phrasing. Test persona compliance after any model change — see Changing the model below.
-
 ### Changing the model
 
 1. Pull the model: `ollama pull <model>`
@@ -84,19 +84,18 @@ Files in `workspace/` are read at session start and injected into the system pro
 3. Update `deploy/mac/setup.sh`: change the `MODEL=` line
 4. Update `workspace/TOOLS.md`: note the model under the minerva host entry
 5. Restart the gateway: `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"`
-6. **Test persona compliance in a fresh session:**
+6. **Test tool call support in a fresh session:**
    ```bash
-   openclaw agent --agent main --session-id "test-$(date +%s%N)" --message "What is your name?"
+   openclaw agent --agent main --session-id "test-$(date +%s%N)" --message "What is your name and what tools do you have available?"
    ```
-   Expected: answers as Cicero. If it says "Qwen", "Assistant", or the model vendor — the model's RLHF training overrides persona instructions. Try a different model.
+   Expected: answers as Cicero, lists available tools. If tool calls are broken — try a different model.
 
-| Model | Persona | Tool Calls | Status |
-|---|---|---|---|
-| llama3.1:8b-instruct-q4_K_M | ✅ Working | ✅ Working | Active primary |
-| qwen3:8b | ❌ Broken | ✅ Working | RLHF overrides persona. Not usable. |
-| deepseek-r1:14b | ✅ Working | ❌ Broken | No function calling support. |
+| Model | Tool Calls | Status |
+|---|---|---|
+| qwen3:8b | ✅ Working | Active primary |
+| llama3.1:8b-instruct-q5_K_M | ✅ Working | Fallback |
 
-A viable primary model must pass both columns. Test persona compliance AND tool call support before setting any model as primary.
+A viable primary model must support Ollama function calling. Test tool call support before setting any model as primary.
 
 ### Adding or updating a skill
 

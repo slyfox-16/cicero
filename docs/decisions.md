@@ -8,9 +8,9 @@ Decisions that are non-obvious or would otherwise be re-litigated without contex
 
 A custom Python/FastAPI inference loop would require maintaining channel adapters, memory serialization, and a skill runtime in perpetuity. OpenClaw already solves all of that. This repo configures an agent — personality, model, skills — it does not reimplement the platform. Less surface area is more reliable surface area.
 
-## llama3.1:8b-instruct-q4_K_M as primary model
+## qwen3:8b as primary model
 
-`llama3.1:8b-instruct-q4_K_M` (Q4_K_M quantization, OLLAMA_KEEP_ALIVE=24h) fits comfortably in 24GB unified memory and has reliable tool-calling support. `qwen3:8b` is the configured fallback. Q4_K_M is the right quantization tradeoff between quality and resident size.
+`qwen3:8b` is the primary model. It has stronger tool-calling and better reasoning than `llama3.1:8b-instruct-q5_K_M`, which is the configured fallback. `llama3.1:8b-instruct-q5_K_M` cannot hold the qwen3 persona but supports tool calls reliably and serves as a fallback when the primary is unavailable. Both fit comfortably in 24GB unified memory.
 
 ## Chroma as a skill, not core memory
 

@@ -22,8 +22,10 @@ ROTATE_PLIST_LABEL="ai.cicero.token-rotate"
 OPENCLAW_HOME="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
-MODEL="llama3.1:8b-instruct-q5_K_M"
+MODEL="qwen3:8b"
+FALLBACK_MODEL="llama3.1:8b-instruct-q5_K_M"
 MODEL_REF="ollama/$MODEL"
+FALLBACK_MODEL_REF="ollama/$FALLBACK_MODEL"
 
 log() { printf '[setup] %s\n' "$*"; }
 warn() { printf '[setup] WARN: %s\n' "$*" >&2; }
@@ -46,12 +48,18 @@ curl -sf --max-time 3 http://127.0.0.1:11434/api/version >/dev/null \
   || die "Ollama not reachable on 127.0.0.1:11434. Install Ollama.app from https://ollama.com/download/mac and start it, then re-run."
 log "ollama: $(curl -sf http://127.0.0.1:11434/api/version)"
 
-# 4. Pull the model if missing
+# 4. Pull models if missing
 if ! ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$MODEL"; then
   log "pulling $MODEL ..."
   ollama pull "$MODEL"
 else
   log "model $MODEL already present"
+fi
+if ! ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$FALLBACK_MODEL"; then
+  log "pulling $FALLBACK_MODEL ..."
+  ollama pull "$FALLBACK_MODEL"
+else
+  log "fallback model $FALLBACK_MODEL already present"
 fi
 
 # 5. OpenClaw CLI
@@ -98,13 +106,15 @@ else
 fi
 
 # 8. Pin the agent default model, ensure token is recorded, remove skipBootstrap
-python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" <<'PY'
+python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" "$FALLBACK_MODEL_REF" <<'PY'
 import json, sys
-path, token, model_ref = sys.argv[1], sys.argv[2], sys.argv[3]
+path, token, model_ref, fallback_ref = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 with open(path) as f:
     cfg = json.load(f)
 defaults = cfg.setdefault("agents", {}).setdefault("defaults", {})
-defaults.setdefault("model", {})["primary"] = model_ref
+model_cfg = defaults.setdefault("model", {})
+model_cfg["primary"] = model_ref
+model_cfg["fallback"] = fallback_ref
 defaults.pop("skipBootstrap", None)  # ensure workspace files are injected at session start
 cfg.setdefault("gateway", {}).setdefault("auth", {})
 cfg["gateway"]["auth"]["mode"] = "token"
@@ -119,7 +129,11 @@ model_params["streaming"] = False
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
-log "openclaw.json: model -> $MODEL_REF, token synced, skipBootstrap removed, tools pruned, streaming disabled"
+log "openclaw.json: model -> $MODEL_REF, fallback -> $FALLBACK_MODEL_REF, token synced, skipBootstrap removed, tools pruned, streaming disabled"
+
+# 8a. Enable DuckDuckGo web search (disabled by default in OpenClaw)
+openclaw plugins enable duckduckgo >/dev/null 2>&1 || true
+log "duckduckgo plugin enabled"
 
 # 9. Workspace symlink
 if [ -L "$WORKSPACE_LINK" ]; then

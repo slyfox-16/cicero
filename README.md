@@ -48,7 +48,7 @@ If `~/.openclaw/openclaw.json` is missing (first run on a fresh machine), the sc
 
 OpenClaw reads `workspace/` at session start and injects `SOUL.md`, `AGENTS.md`, `IDENTITY.md`, and `USER.md` into the system prompt. The workspace is symlinked from `~/.openclaw/workspace` to `~/cicero/workspace`, so the repo is the source of truth — edits are live immediately.
 
-The model is `deepseek-r1:14b` running locally via Ollama. Skills live in `workspace/skills/` and are auto-discovered.
+The model is `qwen3:8b` running locally via Ollama (fallback: `llama3.1:8b-instruct-q5_K_M`). Skills live in `workspace/skills/` and are auto-discovered.
 
 ---
 

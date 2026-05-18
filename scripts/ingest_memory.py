@@ -16,7 +16,7 @@ import chromadb
 from chromadb.utils import embedding_functions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BACKSTORY = REPO_ROOT / "docs" / "cicero-backstory.md"
+BACKSTORY = REPO_ROOT / "docs" / "archive" / "cicero-backstory.md"
 
 CHROMA_HOST = "127.0.0.1"
 CHROMA_PORT = 8000

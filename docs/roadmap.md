@@ -9,8 +9,8 @@ Living planning document. Reflects decided direction, known blockers, and open d
 Cicero is operational on Minerva. This is the baseline.
 
 - OpenClaw 2026.5.x + Ollama (MLX backend, Apple Silicon)
-- Primary model: `llama3.1:8b-instruct-q4_K_M`. Fallback: `qwen3:8b`.
-- Persona integrated — SOUL.md / IDENTITY.md injected every session
+- Primary model: `qwen3:8b`. Fallback: `llama3.1:8b-instruct-q5_K_M`.
+- SOUL.md / IDENTITY.md injected every session (character voice removed; operational rules retained)
 - `cicero-health` stub registered (no backend yet)
 - `cicero-memory` fully wired: Chroma + MCP (`memory_mcp.py` → `memory_query.py`), launchd-managed
 - Chroma running on Minerva (loopback, launchd-managed)
@@ -167,10 +167,10 @@ Calendar setup and any required account or sharing changes need to be defined be
 - At migration:
   - Fresh machine setup via `deploy/mac/setup.sh` (not yet written)
   - `brew install ollama openclaw`
-  - `ollama pull llama3.1:8b-instruct-q4_K_M`
+  - `ollama pull qwen3:8b llama3.1:8b-instruct-q5_K_M`
   - iMessage channel enabled (requires Cicero Apple ID — see Phase 8)
   - Minerva instance decommissioned
-- What does not change: `workspace/`, skills, persona, model config
+- What does not change: `workspace/`, skills, model config
 
 ---
 
