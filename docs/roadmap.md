@@ -71,28 +71,31 @@ Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. C
 
 ## Phase 8 — Apple ID & iMessage
 
-**Status:** Blocked  
-**Blocker:** Cicero requires a dedicated Apple ID before any Apple integrations can proceed. This is the critical path item for Phases 8 and 9.
+**Status:** Complete
 
-### Apple ID Setup
+### Apple ID
 
-- Account uses an iCloud email address — no external email provider
-- Google Voice number reserved for verification — pending account approval
-- Apple ID creation deferred to Mac mini migration: new device reduces Apple account trust friction
+- Apple ID created with iCloud email: `cicero.ortega@icloud.com`
+- Signed into Messages.app on Minerva
 
 ### iMessage Integration
 
-- Cicero communicates via iMessage using his dedicated Apple ID
-- Authorized senders: owner and wife only — all others ignored
+- OpenClaw `@openclaw/imessage` plugin enabled with `imsg` CLI (basic mode, no SIP changes)
+- `imsg` installed via Homebrew (`steipete/tap/imsg`)
+- DM policy: `allowlist` — only authorized senders can message Cicero
+- Authorized senders: Carlos (`carlos.m.ortega16@gmail.com`); wife TBD (append to `allowFrom`)
+- Group chats: disabled
+- Catchup enabled — replays missed messages after gateway restarts (up to 60 min, 50 messages)
+- Message coalescing enabled (`coalesceSameSenderDms`) for command + URL in one turn
 - Cicero responds only when messaged — no proactive outreach in this phase
-- OpenClaw iMessage channel enabled on Mac mini at migration time
+- This is the primary communication channel; CLI is for development
 
 ---
 
 ## Phase 9 — Apple Reminders
 
 **Status:** Planned  
-**Depends on:** Phase 8 (Apple ID)
+**Depends on:** Phase 8 (Complete)
 
 - Cicero is list owner of the shared chore list
 - Owner and wife are collaborators
@@ -161,7 +164,7 @@ Calendar setup and any required account or sharing changes need to be defined be
 ## Phase 13 — Mac Mini Migration
 
 **Status:** Planned  
-**Depends on:** Phase 8 (Apple ID must exist before iMessage can be enabled on the new machine)
+**Depends on:** Phase 8 (Complete — Apple ID exists, iMessage enabled on Minerva)
 
 - Minerva is the current Cicero machine; Mac mini is the long-term target
 - At migration:

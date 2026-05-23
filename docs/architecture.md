@@ -7,41 +7,46 @@ Cicero is a personal AI assistant running as an OpenClaw agent on Minerva (MacBo
 ## Current Architecture
 
 ```
-cicero chat / cicero ask
-        │
-        ├── cicero chat → openclaw tui --local (embedded agent, no gateway needed)
-        │
-        └── cicero ask  → openclaw agent --agent main --message "..."
-                                │
-                                ▼
-                        OpenClaw Gateway (ws://127.0.0.1:18789, loopback only)
-                        Managed by launchd (ai.openclaw.gateway)
-                                │
-                                ├── Agent runtime
-                                │       ├── Reads workspace/ files at session start
-                                │       │   (SOUL.md, AGENTS.md, IDENTITY.md, USER.md, TOOLS.md)
-                                │       ├── Injects loaded skill descriptions into system prompt
-                                │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
-                                │
-                                ├── Ollama provider (http://127.0.0.1:11434, MLX backend)
-                                │       ├── qwen3:8b  [primary]
-                                │       └── llama3.1:8b-instruct-q5_K_M  [fallback]
-                                │
-                                ├── Workspace skills (workspace/skills/)
-                                │       ├── cicero-health  [stub — Postgres not yet wired]
-                                │       └── cicero-memory  →  query_cicero_memory_tool MCP tool
-                                │                                  │
-                                │                                  ▼
-                                │                          memory_mcp.py (stdio-launched)
-                                │                                  │
-                                │                                  ▼
-                                │                          memory_query.py (cosine search)
-                                │                                  │
-                                │                                  ▼
-                                └── Chroma server (http://127.0.0.1:8000, loopback only)
-                                        Managed by launchd (ai.cicero.chroma)
-                                        Persist dir: ~/cicero/data/chroma/
-                                        Collection: cicero_memory (all-MiniLM-L6-v2, 384-dim)
+iMessage (primary channel)          cicero chat / cicero ask (dev)
+        │                                       │
+        │                                       ├── cicero chat → openclaw tui --local
+        │                                       │
+        ▼                                       └── cicero ask  → openclaw agent ...
+imsg CLI (/opt/homebrew/bin/imsg)                           │
+  reads ~/Library/Messages/chat.db               ▼
+        │                           OpenClaw Gateway (ws://127.0.0.1:18789, loopback only)
+        └──────────────────────────► Managed by launchd (ai.openclaw.gateway)
+                                                │
+                                                ├── iMessage channel (@openclaw/imessage)
+                                                │       ├── allowlist DM policy (Carlos only)
+                                                │       ├── catchup enabled (60 min window)
+                                                │       └── Apple ID: cicero.ortega@icloud.com
+                                                │
+                                                ├── Agent runtime
+                                                │       ├── Reads workspace/ files at session start
+                                                │       │   (SOUL.md, AGENTS.md, IDENTITY.md, USER.md, TOOLS.md)
+                                                │       ├── Injects loaded skill descriptions into system prompt
+                                                │       └── Maintains session history in ~/.openclaw/agents/main/sessions/
+                                                │
+                                                ├── Ollama provider (http://127.0.0.1:11434, MLX backend)
+                                                │       ├── qwen3:8b  [primary]
+                                                │       └── llama3.1:8b-instruct-q5_K_M  [fallback]
+                                                │
+                                                ├── Workspace skills (workspace/skills/)
+                                                │       ├── cicero-health  [stub — Postgres not yet wired]
+                                                │       └── cicero-memory  →  query_cicero_memory_tool MCP tool
+                                                │                                  │
+                                                │                                  ▼
+                                                │                          memory_mcp.py (stdio-launched)
+                                                │                                  │
+                                                │                                  ▼
+                                                │                          memory_query.py (cosine search)
+                                                │                                  │
+                                                │                                  ▼
+                                                └── Chroma server (http://127.0.0.1:8000, loopback only)
+                                                        Managed by launchd (ai.cicero.chroma)
+                                                        Persist dir: ~/cicero/data/chroma/
+                                                        Collection: cicero_memory (all-MiniLM-L6-v2, 384-dim)
 ```
 
 All inference and data remain on Minerva. No outbound traffic.
@@ -97,11 +102,13 @@ cicero/
 | Machine | MacBook Pro M4 Pro, 24GB unified memory, Apple Silicon |
 | Service manager | launchd user agent |
 | Gateway token | env var in launchd plist |
-| Channels | CLI only (`cicero chat`, `cicero ask`) |
+| Primary channel | iMessage (`cicero.ortega@icloud.com`) |
+| Dev channel | CLI (`cicero chat`, `cicero ask`) |
+| iMessage bridge | `imsg` CLI v0.9.0 (`steipete/tap/imsg`) |
 | Ollama backend | MLX (Apple Silicon) |
 | Primary model | `qwen3:8b` |
 | Fallback model | `llama3.1:8b-instruct-q5_K_M` |
-| Setup script | `deploy/mac/setup.sh` (pending) |
+| Setup script | `deploy/mac/setup.sh` |
 
 ---
 
@@ -110,4 +117,4 @@ cicero/
 - **Skill routing.** `cicero-health` is a stub — the SKILL.md defines behavior but there is no real HTTP/SQL dispatch behind it yet. `cicero-memory` is fully wired: MCP server (`memory_mcp.py`) → retrieval library (`memory_query.py`) → Chroma, launchd-managed. Prose-only stubs route inconsistently; real dispatch is reliable.
 - **Single agent.** Only the `main` agent is configured. Multi-agent workflows are not needed yet.
 - **No backup for `~/.openclaw`.** Session history and credentials live outside the repo. The workspace is backed by git. A `deploy/mac/backup.sh` is a future work item.
-- **iMessage deferred.** Native Apple ecosystem channel access waits on the Mac mini migration. See `docs/roadmap.md`.
+- **iMessage basic mode only.** Running without SIP disabled — no reactions, edit, unsend, or threaded replies. Text send/receive is fully functional. Advanced actions require SIP off (deliberate tradeoff; see `docs/decisions.md`).

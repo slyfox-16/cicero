@@ -47,7 +47,11 @@
       "Bash(launchctl load *)",
       "Bash(curl -s http://127.0.0.1:8000/api/v1/heartbeat)",
       "Bash(curl -s http://127.0.0.1:8000/api/v2/heartbeat)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(bash deploy/mac/setup.sh)",
+      "Bash(nc -z 127.0.0.1 18789)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/cicero.ortega/.openclaw/openclaw.json'\\)\\); print\\(json.dumps\\(d.get\\('agents', {}\\).get\\('defaults', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 - /Users/cicero.ortega/.openclaw/openclaw.json)"
     ],
     "additionalDirectories": [
       "/Users/cicero.ortega/.openclaw",

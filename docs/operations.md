@@ -48,6 +48,49 @@ launchctl print "gui/$(id -u)/ai.cicero.token-rotate"
 
 ---
 
+## iMessage channel
+
+Cicero receives and responds to iMessages via the `@openclaw/imessage` plugin backed by the `imsg` CLI. The channel reads `~/Library/Messages/chat.db` directly and sends via Messages.app AppleScript.
+
+| Item | Value |
+|---|---|
+| Apple ID | `cicero.ortega@icloud.com` |
+| Plugin | `@openclaw/imessage` (enabled in `openclaw.json`) |
+| Bridge binary | `/opt/homebrew/Cellar/imsg/0.9.0/libexec/imsg` |
+| DM policy | `allowlist` — Carlos (`carlos.m.ortega16@gmail.com`) only |
+| Group chats | disabled |
+| Catchup | enabled (60 min window, 50 messages per restart) |
+
+### Required macOS permissions
+
+Both must be granted once per machine. If revoked or lost after an OS update, re-grant and restart the gateway.
+
+- **Full Disk Access**: granted to `/opt/homebrew/Cellar/node/26.0.0/bin/node` and `/opt/homebrew/Cellar/imsg/0.9.0/libexec/imsg` in System Settings > Privacy & Security > Full Disk Access
+- **Automation (Messages.app)**: granted in System Settings > Privacy & Security > Automation — prompted on first send
+
+### Operating the iMessage channel
+
+```bash
+# Check channel status
+openclaw channels status --probe
+
+# Test imsg can read the database
+imsg chats --limit 3
+
+# Check gateway logs for iMessage activity
+tail -f ~/Library/Logs/openclaw-gateway.out.log | grep imessage
+
+# Add an authorized sender (wife, etc.) — edit openclaw.json, then restart gateway
+# "allowFrom": ["carlos.m.ortega16@gmail.com", "+1XXXXXXXXXX"]
+launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
+```
+
+### Adding an authorized sender
+
+Edit `~/.openclaw/openclaw.json`, find `channels.imessage.allowFrom`, and append the new handle (email or E.164 phone number like `+15551234567`). Then restart the gateway.
+
+---
+
 ## Common failure modes
 
 | Symptom | Cause | Fix |
@@ -62,6 +105,10 @@ launchctl print "gui/$(id -u)/ai.cicero.token-rotate"
 | Ingestion fails with `Could not connect to tenant` | Chroma not running or wrong port | Check `~/Library/Logs/cicero-chroma.err.log`; restart unit |
 | Agent never invokes `query_cicero_memory_tool` | MCP server unregistered or gateway cached old config | `openclaw mcp list` should show `cicero-memory`; if missing re-run `openclaw mcp set`; restart gateway |
 | MCP tool errors with `ModuleNotFoundError: mcp` | `mcp` package not in env | `uv pip install --python ~/miniconda3/envs/cicero-memory/bin/python mcp` |
+| iMessage: `authorization denied (code: 23)` | Full Disk Access not granted to the imsg binary | Grant FDA to `/opt/homebrew/Cellar/imsg/0.9.0/libexec/imsg` and `/opt/homebrew/Cellar/node/.../bin/node` in System Settings |
+| iMessage: messages from Carlos ignored | `allowFrom` identifier mismatch | `sqlite3 ~/Library/Messages/chat.db "SELECT id FROM handle ORDER BY ROWID DESC LIMIT 10;"` — update `allowFrom` with the correct handle |
+| iMessage: channel shows `exited` in logs | FDA revoked (common after macOS update) | Re-grant permissions, restart gateway |
+| iMessage: Cicero receives but doesn't send | Automation permission for Messages.app revoked | System Settings > Privacy & Security > Automation — re-enable Messages for Node |
 
 ---
 

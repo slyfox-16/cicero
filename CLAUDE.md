@@ -2,6 +2,8 @@
 
 This repo is Cicero's configuration — personality, workspace files, skills, and deploy scripts. It is not Cicero itself. The runtime is OpenClaw + Ollama running on minerva. Edits here are live immediately (workspace is symlinked into the running agent).
 
+**Primary channel:** iMessage at `cicero.ortega@icloud.com`. CLI (`cicero chat` / `cicero ask`) is for development.
+
 ---
 
 ## What this repo contains

@@ -107,7 +107,7 @@ fi
 
 # 8. Pin the agent default model, ensure token is recorded, remove skipBootstrap
 python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" "$FALLBACK_MODEL_REF" <<'PY'
-import json, sys
+import json, os, sys
 path, token, model_ref, fallback_ref = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 with open(path) as f:
     cfg = json.load(f)
@@ -122,6 +122,25 @@ cfg["gateway"]["auth"]["token"] = token
 tools = cfg.setdefault("tools", {})
 tools["profile"] = "coding"
 tools["deny"] = ["canvas", "image_generate", "music_generate", "video_generate", "code_execution"]
+channels = cfg.setdefault("channels", {})
+if "imessage" not in channels:
+    channels["imessage"] = {
+        "enabled": True,
+        "cliPath": "/opt/homebrew/bin/imsg",
+        "dbPath": f"{os.environ['HOME']}/Library/Messages/chat.db",
+        "service": "imessage",
+        "dmPolicy": "allowlist",
+        "allowFrom": ["carlos.m.ortega16@gmail.com"],
+        "groupPolicy": "disabled",
+        "coalesceSameSenderDms": True,
+        "blockStreaming": True,
+        "catchup": {
+            "enabled": True,
+            "maxAgeMinutes": 60,
+            "perRunLimit": 50,
+            "firstRunLookbackMinutes": 30
+        }
+    }
 # Workaround for openclaw issue #5769: Ollama streaming drops tool_calls delta chunks.
 # streaming: false must live in params, not as a top-level field (issue #12217).
 model_params = defaults.setdefault("models", {}).setdefault(model_ref, {}).setdefault("params", {})
@@ -134,6 +153,19 @@ log "openclaw.json: model -> $MODEL_REF, fallback -> $FALLBACK_MODEL_REF, token 
 # 8a. Enable DuckDuckGo web search (disabled by default in OpenClaw)
 openclaw plugins enable duckduckgo >/dev/null 2>&1 || true
 log "duckduckgo plugin enabled"
+
+# 8b. imsg CLI for iMessage channel
+if ! command -v imsg >/dev/null 2>&1; then
+  log "installing imsg via Homebrew (steipete/tap)"
+  brew tap steipete/tap 2>/dev/null || true
+  brew install steipete/tap/imsg
+else
+  log "imsg already installed: $(imsg --version 2>&1 | head -1)"
+fi
+
+# 8c. Enable iMessage plugin and add channel config
+openclaw plugins enable imessage >/dev/null 2>&1 || true
+log "imessage plugin enabled"
 
 # 9. Workspace symlink
 if [ -L "$WORKSPACE_LINK" ]; then
@@ -251,6 +283,15 @@ if nc -z 127.0.0.1 18789 2>/dev/null; then
 else
   warn "gateway not responding on 18789 — check: launchctl print gui/$(id -u)/$PLIST_LABEL"
   warn "logs: tail ~/Library/Logs/openclaw-gateway.err.log"
+fi
+
+# 15. Remind about manual macOS permissions for iMessage
+if command -v imsg >/dev/null 2>&1; then
+  log ""
+  log "iMessage channel: manual permission steps required if not already granted:"
+  log "  1. System Settings > Privacy & Security > Full Disk Access — add $(command -v node) and $(command -v imsg)"
+  log "  2. System Settings > Privacy & Security > Automation — allow Messages.app control (prompted on first send)"
+  log ""
 fi
 
 log "done."
