@@ -43,6 +43,14 @@ fi
 log "node: $(node --version)"
 command -v npm >/dev/null 2>&1 || die "npm not found after node install"
 
+# 2a. GitHub CLI
+if ! command -v gh >/dev/null 2>&1; then
+  log "installing gh (GitHub CLI) via Homebrew"
+  brew install gh
+else
+  log "gh: $(gh --version | head -1)"
+fi
+
 # 3. Ollama (managed externally by Ollama.app)
 curl -sf --max-time 3 http://127.0.0.1:11434/api/version >/dev/null \
   || die "Ollama not reachable on 127.0.0.1:11434. Install Ollama.app from https://ollama.com/download/mac and start it, then re-run."
