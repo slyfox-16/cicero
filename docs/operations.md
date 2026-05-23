@@ -78,11 +78,11 @@ openclaw channels status --probe
 imsg chats --limit 3
 
 # Check gateway logs for iMessage activity
-tail -f ~/Library/Logs/openclaw-gateway.out.log | grep imessage
+cicero gateway logs
 
 # Add an authorized sender (wife, etc.) — edit openclaw.json, then restart gateway
 # "allowFrom": ["carlos.m.ortega16@gmail.com", "+1XXXXXXXXXX"]
-launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
+cicero gateway restart
 ```
 
 ### Adding an authorized sender
@@ -97,7 +97,7 @@ Edit `~/.openclaw/openclaw.json`, find `channels.imessage.allowFrom`, and append
 |---|---|---|
 | Cicero answers as "Assistant" / "Qwen" / model vendor | `skipBootstrap: true` in openclaw.json | Remove it (see above) |
 | Cicero answers as "Assistant" / vendor name even after fix | Wrong model — strong RLHF identity anchoring | Check `openclaw config get agents.defaults` → verify `model.primary` is `ollama/qwen3:8b` |
-| `cicero ask` hangs or errors | Gateway not running | `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"` |
+| `cicero ask` hangs or errors | Gateway not running | `cicero gateway restart` |
 | SOUL.md edit has no effect on `cicero ask` | openclaw.json change needs restart | Restart gateway |
 | Workspace symlink wrong after worktree cleanup | Symlink pointed at worktree path | `ln -sfn ~/cicero/workspace ~/.openclaw/workspace` |
 | Onboard re-run changed default model | `openclaw onboard` auto-pulls gemma4 | Re-pin: `openclaw config get agents.defaults`, update `model.primary` |
@@ -148,5 +148,5 @@ openclaw mcp list
 openclaw mcp show cicero-memory
 
 # Restart the gateway after MCP changes (config cache)
-launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
+cicero gateway restart
 ```

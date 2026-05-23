@@ -31,8 +31,8 @@ Re-runnable. The token is generated only on the first install — delete `~/Libr
 ## Diagnostics
 
 ```bash
-launchctl print "gui/$(id -u)/ai.openclaw.gateway" | head
-tail ~/Library/Logs/openclaw-gateway.err.log
+cicero gateway status
+cicero gateway logs
 curl -sf http://127.0.0.1:18789/
 ```
 
@@ -61,7 +61,7 @@ These keys live inside `agents.defaults` in `~/.openclaw/openclaw.json`. They ar
 - `mode "enforced"`: active persona adherence monitoring across tool calls and long turns.
 - `contextStrategy "personaFirst"`: SOUL.md takes precedence in assembled system prompt.
 
-After editing, restart: `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"`
+After editing, restart: `cicero gateway restart`
 
 Note: the top-level key is `agents` (plural). OpenClaw rejects an `agent` (singular) key with a schema validation error.
 

@@ -56,7 +56,7 @@ cicero ask "..."     # One-shot via gateway
 
 Restart gateway (required after openclaw.json changes):
 ```bash
-launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"
+cicero gateway restart
 ```
 
 ---
@@ -85,7 +85,7 @@ Files in `workspace/` are read at session start and injected into the system pro
 2. Update `openclaw.json`: `openclaw config get agents.defaults` → edit `model.primary`
 3. Update `deploy/mac/setup.sh`: change the `MODEL=` line
 4. Update `workspace/TOOLS.md`: note the model under the minerva host entry
-5. Restart the gateway: `launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway"`
+5. Restart the gateway: `cicero gateway restart`
 6. **Test tool call support in a fresh session:**
    ```bash
    openclaw agent --agent main --session-id "test-$(date +%s%N)" --message "What is your name and what tools do you have available?"

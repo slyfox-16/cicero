@@ -25,7 +25,7 @@ cicero ask "your message here"
 The gateway must be running. Check with:
 
 ```bash
-launchctl print "gui/$(id -u)/ai.openclaw.gateway" | head
+cicero gateway status
 ```
 
 ---
