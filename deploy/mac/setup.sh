@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent bootstrap for Cicero on a macOS box (Apple Silicon or Intel).
+# Idempotent bootstrap for Cicero on a macOS box (Apple Silicon).
 #
 #   ./deploy/mac/setup.sh
 #
@@ -22,10 +22,9 @@ ROTATE_PLIST_LABEL="ai.cicero.token-rotate"
 OPENCLAW_HOME="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
-MODEL="qwen3:8b"
-FALLBACK_MODEL="llama3.1:8b-instruct-q5_K_M"
-MODEL_REF="ollama/$MODEL"
-FALLBACK_MODEL_REF="ollama/$FALLBACK_MODEL"
+ANTHROPIC_KEY_FILE="$HOME/.config/anthropic/api_key"
+MODEL_REF="anthropic/claude-haiku-4-5"
+MEMORY_PY="$HOME/miniconda3/envs/cicero-memory/bin/python"
 
 log() { printf '[setup] %s\n' "$*"; }
 warn() { printf '[setup] WARN: %s\n' "$*" >&2; }
@@ -51,33 +50,36 @@ else
   log "gh: $(gh --version | head -1)"
 fi
 
-# 3. Ollama (managed externally by Ollama.app)
-curl -sf --max-time 3 http://127.0.0.1:11434/api/version >/dev/null \
-  || die "Ollama not reachable on 127.0.0.1:11434. Install Ollama.app from https://ollama.com/download/mac and start it, then re-run."
-log "ollama: $(curl -sf http://127.0.0.1:11434/api/version)"
-
-# 4. Pull models if missing
-if ! ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$MODEL"; then
-  log "pulling $MODEL ..."
-  ollama pull "$MODEL"
+# 3. Anthropic API key — required for both the OpenClaw provider and the brain MCP
+api_key=""
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  api_key="$ANTHROPIC_API_KEY"
+  log "using ANTHROPIC_API_KEY from environment"
+elif [ -r "$ANTHROPIC_KEY_FILE" ]; then
+  api_key="$(tr -d '[:space:]' < "$ANTHROPIC_KEY_FILE")"
+  log "using API key from $ANTHROPIC_KEY_FILE"
 else
-  log "model $MODEL already present"
+  die "Anthropic API key not found. Set ANTHROPIC_API_KEY or write the key to $ANTHROPIC_KEY_FILE (mode 0600)."
 fi
-if ! ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$FALLBACK_MODEL"; then
-  log "pulling $FALLBACK_MODEL ..."
-  ollama pull "$FALLBACK_MODEL"
-else
-  log "fallback model $FALLBACK_MODEL already present"
-fi
+[ -n "$api_key" ] || die "Anthropic API key is empty."
 
-# 5. OpenClaw CLI
+# Mirror the key into the file so the brain MCP can read it regardless of shell state
+mkdir -p "$(dirname "$ANTHROPIC_KEY_FILE")"
+umask_old=$(umask)
+umask 077
+printf '%s' "$api_key" > "$ANTHROPIC_KEY_FILE"
+umask "$umask_old"
+chmod 600 "$ANTHROPIC_KEY_FILE"
+log "anthropic api key persisted at $ANTHROPIC_KEY_FILE (mode 0600)"
+
+# 4. OpenClaw CLI
 if ! command -v openclaw >/dev/null 2>&1; then
   log "installing openclaw via npm -g"
   npm install -g openclaw@latest
 fi
 log "openclaw: $(openclaw --version 2>&1 | head -1)"
 
-# 6. Token: reuse the one in openclaw.json if present, else generate a fresh one
+# 5. Token: reuse the one in openclaw.json if present, else generate a fresh one
 mkdir -p "$OPENCLAW_HOME"
 if [ -f "$OPENCLAW_CONFIG" ]; then
   token="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("gateway",{}).get("auth",{}).get("token",""))' "$OPENCLAW_CONFIG")"
@@ -92,14 +94,15 @@ else
   log "reusing existing gateway token from openclaw.json"
 fi
 
-# 7. Onboard if openclaw.json is missing (non-interactive, local-only, no daemon)
+# 6. Onboard if openclaw.json is missing
 if [ ! -f "$OPENCLAW_CONFIG" ]; then
-  log "running openclaw onboard (non-interactive, local + ollama)"
-  openclaw onboard \
+  log "running openclaw onboard (non-interactive, local + anthropic)"
+  ANTHROPIC_API_KEY="$api_key" openclaw onboard \
     --non-interactive --accept-risk \
     --flow quickstart \
     --mode local \
-    --auth-choice ollama \
+    --auth-choice anthropic-cli \
+    --anthropic-api-key "$api_key" \
     --gateway-bind loopback \
     --gateway-port 18789 \
     --gateway-auth token \
@@ -113,17 +116,31 @@ else
   log "openclaw.json already present — skipping onboard"
 fi
 
-# 8. Pin the agent default model, ensure token is recorded, remove skipBootstrap
-python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" "$FALLBACK_MODEL_REF" <<'PY'
+# 7. Register / refresh the Anthropic API key with the OpenClaw provider
+log "registering anthropic provider auth"
+ANTHROPIC_API_KEY="$api_key" openclaw infer model auth login \
+  --provider anthropic --method apiKey >/dev/null 2>&1 \
+  || warn "openclaw auth login returned non-zero — check 'openclaw infer model auth status'"
+
+# 8. Pin the agent default model to Haiku, sync gateway token, ensure clean state
+python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" <<'PY'
 import json, os, sys
-path, token, model_ref, fallback_ref = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+path, token, model_ref = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f:
     cfg = json.load(f)
 defaults = cfg.setdefault("agents", {}).setdefault("defaults", {})
 model_cfg = defaults.setdefault("model", {})
 model_cfg["primary"] = model_ref
-model_cfg.pop("fallback", None)  # openclaw does not support a fallback key in model config
-defaults.pop("skipBootstrap", None)  # ensure workspace files are injected at session start
+model_cfg.pop("fallback", None)
+defaults.pop("skipBootstrap", None)
+# Drop legacy per-model Ollama params (no-ops for Anthropic; kept harmlessly removed)
+models = defaults.get("models")
+if isinstance(models, dict):
+    for k in list(models.keys()):
+        if k.startswith("ollama/"):
+            models.pop(k, None)
+    if not models:
+        defaults.pop("models", None)
 cfg.setdefault("gateway", {}).setdefault("auth", {})
 cfg["gateway"]["auth"]["mode"] = "token"
 cfg["gateway"]["auth"]["token"] = token
@@ -146,19 +163,15 @@ if "imessage" not in channels:
             "enabled": True,
             "maxAgeMinutes": 60,
             "perRunLimit": 50,
-            "firstRunLookbackMinutes": 30
-        }
+            "firstRunLookbackMinutes": 30,
+        },
     }
-# Workaround for openclaw issue #5769: Ollama streaming drops tool_calls delta chunks.
-# streaming: false must live in params, not as a top-level field (issue #12217).
-model_params = defaults.setdefault("models", {}).setdefault(model_ref, {}).setdefault("params", {})
-model_params["streaming"] = False
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
-log "openclaw.json: model -> $MODEL_REF, fallback -> $FALLBACK_MODEL_REF, token synced, skipBootstrap removed, tools pruned, streaming disabled"
+log "openclaw.json: model -> $MODEL_REF, token synced, skipBootstrap removed, legacy ollama params pruned"
 
-# 8a. Enable DuckDuckGo web search (disabled by default in OpenClaw)
+# 8a. Enable DuckDuckGo web search
 openclaw plugins enable duckduckgo >/dev/null 2>&1 || true
 log "duckduckgo plugin enabled"
 
@@ -171,7 +184,7 @@ else
   log "imsg already installed: $(imsg --version 2>&1 | head -1)"
 fi
 
-# 8c. Enable iMessage plugin and add channel config
+# 8c. Enable iMessage plugin
 openclaw plugins enable imessage >/dev/null 2>&1 || true
 log "imessage plugin enabled"
 
@@ -198,14 +211,32 @@ else
 fi
 log "workspace -> $(readlink "$WORKSPACE_LINK")"
 
-# 10. Install / refresh launchd plist (always render from template so token + paths stay in sync)
+# 9a. Ensure Python deps for the MCP servers
+if [ -x "$MEMORY_PY" ]; then
+  log "ensuring mcp + anthropic + chromadb installed in cicero-memory env"
+  "$MEMORY_PY" -m pip install --quiet --upgrade mcp anthropic chromadb >/dev/null 2>&1 \
+    || warn "pip install in $MEMORY_PY failed — re-run manually if MCP servers fail to start"
+else
+  warn "cicero-memory python env not found at $MEMORY_PY"
+  warn "create it manually: conda create -n cicero-memory python=3.11 && conda run -n cicero-memory pip install mcp anthropic chromadb"
+fi
+
+# 9b. Register MCP servers
+log "registering MCP servers"
+MEMORY_MCP_JSON="{\"command\":\"$MEMORY_PY\",\"args\":[\"$REPO_ROOT/lib/memory_mcp.py\"]}"
+BRAIN_MCP_JSON="{\"command\":\"$MEMORY_PY\",\"args\":[\"$REPO_ROOT/lib/brain_mcp.py\"]}"
+openclaw mcp set cicero-memory "$MEMORY_MCP_JSON" >/dev/null 2>&1 \
+  || warn "failed to register cicero-memory MCP"
+openclaw mcp set cicero-brain "$BRAIN_MCP_JSON" >/dev/null 2>&1 \
+  || warn "failed to register cicero-brain MCP"
+
+# 10. Install / refresh launchd plist for the gateway
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 npm_root="$(npm root -g)"
 openclaw_entry="$npm_root/openclaw/dist/index.js"
 [ -f "$openclaw_entry" ] || die "openclaw entry not found at $openclaw_entry"
 node_bin="$(command -v node)"
 
-# Render the plist template into a temp file, then move into place only if changed.
 tmp_plist="$(mktemp)"
 sed \
   -e "s|__GENERATE_ME__|$token|g" \
@@ -226,14 +257,12 @@ else
   rm -f "$tmp_plist"
   log "launchd plist already up to date"
 fi
-
 if [ "$needs_bootstrap" -eq 1 ]; then
   launchctl bootstrap "gui/$(id -u)" "$PLIST_DST" 2>/dev/null \
     || warn "launchctl bootstrap returned non-zero (may already be loaded)"
 fi
 
 # 11. Chroma launchd plist
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 tmp_chroma="$(mktemp)"
 sed -e "s|__HOME__|$HOME|g" "$CHROMA_PLIST_SRC" > "$tmp_chroma"
 chroma_needs_bootstrap=0
@@ -273,6 +302,18 @@ if [ "$rotate_needs_bootstrap" -eq 1 ]; then
     || warn "launchctl bootstrap token-rotate returned non-zero (may already be loaded)"
 fi
 
+# 12. Re-ingest the Chroma backstory corpus (idempotent)
+if [ -x "$MEMORY_PY" ] && [ -f "$REPO_ROOT/scripts/ingest_memory.py" ]; then
+  log "ingesting cicero-backstory.md into Chroma (idempotent)"
+  # Give Chroma a moment if it just started
+  for _ in 1 2 3 4 5; do
+    if curl -sf --max-time 1 http://127.0.0.1:8000/api/v2/heartbeat >/dev/null; then break; fi
+    sleep 1
+  done
+  "$MEMORY_PY" "$REPO_ROOT/scripts/ingest_memory.py" \
+    || warn "ingest_memory.py returned non-zero — re-run manually"
+fi
+
 # 13. cicero CLI wrapper
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
@@ -293,7 +334,7 @@ else
   warn "logs: tail ~/Library/Logs/openclaw-gateway.err.log"
 fi
 
-# 15. Remind about manual macOS permissions for iMessage
+# 15. macOS permission reminders for iMessage
 if command -v imsg >/dev/null 2>&1; then
   log ""
   log "iMessage channel: manual permission steps required if not already granted:"
