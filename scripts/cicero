@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PYTHON="/Users/cicero.ortega/miniconda3/envs/cicero-memory/bin/python"
+PYTHON="$REPO_ROOT/.venv/bin/python"
 
 usage() {
   printf 'Usage:\n'

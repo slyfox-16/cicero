@@ -24,7 +24,7 @@ OPENCLAW_CONFIG="$OPENCLAW_HOME/openclaw.json"
 WORKSPACE_LINK="$OPENCLAW_HOME/workspace"
 ANTHROPIC_KEY_FILE="$HOME/.config/anthropic/api_key"
 MODEL_REF="anthropic/claude-haiku-4-5"
-MEMORY_PY="$HOME/miniconda3/envs/cicero-memory/bin/python"
+VENV_PY="$REPO_ROOT/.venv/bin/python"
 
 log() { printf '[setup] %s\n' "$*"; }
 warn() { printf '[setup] WARN: %s\n' "$*" >&2; }
@@ -218,20 +218,22 @@ else
 fi
 log "workspace -> $(readlink "$WORKSPACE_LINK")"
 
-# 9a. Ensure Python deps for the MCP servers
-if [ -x "$MEMORY_PY" ]; then
-  log "ensuring mcp + anthropic + chromadb installed in cicero-memory env"
-  "$MEMORY_PY" -m pip install --quiet --upgrade mcp anthropic chromadb >/dev/null 2>&1 \
-    || warn "pip install in $MEMORY_PY failed — re-run manually if MCP servers fail to start"
-else
-  warn "cicero-memory python env not found at $MEMORY_PY"
-  warn "create it manually: conda create -n cicero-memory python=3.11 && conda run -n cicero-memory pip install mcp anthropic chromadb"
+# 9a. Ensure Python venv and deps (uv-managed, repo-local at .venv/)
+if ! command -v uv >/dev/null 2>&1; then
+  log "installing uv via Homebrew"
+  brew install uv
 fi
+log "uv: $(uv --version)"
+log "syncing Python venv at $REPO_ROOT/.venv"
+(cd "$REPO_ROOT" && uv sync --quiet) \
+  || die "uv sync failed — check pyproject.toml and try: cd $REPO_ROOT && uv sync"
+[ -x "$VENV_PY" ] || die "venv python not found at $VENV_PY after uv sync"
+log "venv python: $("$VENV_PY" --version)"
 
 # 9b. Register MCP servers
 log "registering MCP servers"
-MEMORY_MCP_JSON="{\"command\":\"$MEMORY_PY\",\"args\":[\"$REPO_ROOT/lib/memory_mcp.py\"]}"
-BRAIN_MCP_JSON="{\"command\":\"$MEMORY_PY\",\"args\":[\"$REPO_ROOT/lib/brain_mcp.py\"]}"
+MEMORY_MCP_JSON="{\"command\":\"$VENV_PY\",\"args\":[\"$REPO_ROOT/lib/memory_mcp.py\"]}"
+BRAIN_MCP_JSON="{\"command\":\"$VENV_PY\",\"args\":[\"$REPO_ROOT/lib/brain_mcp.py\"]}"
 openclaw mcp set cicero-memory "$MEMORY_MCP_JSON" >/dev/null 2>&1 \
   || warn "failed to register cicero-memory MCP"
 openclaw mcp set cicero-brain "$BRAIN_MCP_JSON" >/dev/null 2>&1 \
@@ -310,14 +312,14 @@ if [ "$rotate_needs_bootstrap" -eq 1 ]; then
 fi
 
 # 12. Re-ingest the Chroma backstory corpus (idempotent)
-if [ -x "$MEMORY_PY" ] && [ -f "$REPO_ROOT/scripts/ingest_memory.py" ]; then
+if [ -x "$VENV_PY" ] && [ -f "$REPO_ROOT/scripts/ingest_memory.py" ]; then
   log "ingesting cicero-backstory.md into Chroma (idempotent)"
   # Give Chroma a moment if it just started
   for _ in 1 2 3 4 5; do
     if curl -sf --max-time 1 http://127.0.0.1:8000/api/v2/heartbeat >/dev/null; then break; fi
     sleep 1
   done
-  "$MEMORY_PY" "$REPO_ROOT/scripts/ingest_memory.py" \
+  "$VENV_PY" "$REPO_ROOT/scripts/ingest_memory.py" \
     || warn "ingest_memory.py returned non-zero — re-run manually"
 fi
 

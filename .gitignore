@@ -19,3 +19,7 @@ npm-debug.log*
 
 # Chroma vector store — binary index files, grows continuously
 data/
+
+# Python virtualenv (managed by uv, repo-local)
+.venv/
+uv.lock
