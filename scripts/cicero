@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Resolve symlinks so REPO_ROOT is correct when invoked via ~/.local/bin/cicero
+_SCRIPT="$0"
+while [ -L "$_SCRIPT" ]; do
+  _SCRIPT_DIR="$(cd "$(dirname "$_SCRIPT")" && pwd -P)"
+  _SCRIPT="$(readlink "$_SCRIPT")"
+  [[ "$_SCRIPT" != /* ]] && _SCRIPT="$_SCRIPT_DIR/$_SCRIPT"
+done
+REPO_ROOT="$(cd "$(dirname "$_SCRIPT")/.." && pwd -P)"
 PYTHON="$REPO_ROOT/.venv/bin/python"
 
 usage() {
