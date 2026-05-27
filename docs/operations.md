@@ -6,30 +6,24 @@ Runbook for operating Cicero on minerva. Not a development guide — see CLAUDE.
 
 ## Anthropic API key
 
-Inference goes through the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`. The provider reads the key from OpenClaw's credentials store; the brain-escalation MCP (`lib/brain_mcp.py`) reads it from `ANTHROPIC_API_KEY` or `~/.config/anthropic/api_key`.
+The key lives in `~/cicero/.env` as `ANTHROPIC_API_KEY=sk-ant-...`. `setup.sh` reads it from there and stamps it into two places:
 
-**Initial setup** (handled by `deploy/mac/setup.sh`, but reproducible by hand):
+1. **Gateway plist** (`~/Library/LaunchAgents/ai.openclaw.gateway.plist`) — `EnvironmentVariables` block. OpenClaw's `@openclaw/anthropic-provider` reads `ANTHROPIC_API_KEY` from the process environment. This survives every `cicero gateway restart` without interactive auth.
+2. **`~/.config/anthropic/api_key`** (mode 0600) — read by `lib/brain_mcp.py` as fallback if the env var isn't set. Since brain_mcp.py runs as a child of the gateway, it also inherits `ANTHROPIC_API_KEY` from the plist env directly.
 
+**Initial setup** is fully handled by `deploy/mac/setup.sh` — no interactive steps.
+
+If you ever need to register OpenClaw's credential store manually (e.g. after a fresh `openclaw onboard`):
 ```bash
-# Store the key for the provider (OpenClaw credentials)
-openclaw infer model auth login --provider anthropic --method apiKey
-# (paste key when prompted)
-
-# Store the key for the brain MCP (separate path, intentional — the MCP runs
-# in its own process and shouldn't depend on OpenClaw's credentials format)
-mkdir -p ~/.config/anthropic
-umask 077 && printf '%s' 'sk-ant-...' > ~/.config/anthropic/api_key
-chmod 600 ~/.config/anthropic/api_key
-
-# Smoke test
-openclaw infer model run --model anthropic/claude-haiku-4-5 --prompt "say hi"
+openclaw models auth login --provider anthropic
+# choose "Anthropic API key", paste key
 ```
 
 **Rotation.** When the key is rotated in the Anthropic console:
-1. Update `~/.config/anthropic/api_key` (mode 0600).
-2. Re-run `openclaw infer model auth login --provider anthropic --method apiKey` and paste the new key.
+1. Update `~/cicero/.env` with the new key.
+2. Re-run `./deploy/mac/setup.sh` — it stamps the new key into the plist and the key file.
 3. `cicero gateway restart`.
-4. Smoke test as above.
+4. Smoke test: `cicero ask "hello"`
 
 **Spend audit.** Each big-brain / galaxy-brain call writes a JSON line to `~/Library/Logs/cicero-brain.log` with model, latency, and token counts. Tail it: `tail -f ~/Library/Logs/cicero-brain.log | jq .`.
 
@@ -147,7 +141,7 @@ cicero gateway restart
 | Ingestion fails with `Could not connect to tenant` | Chroma not running or wrong port | Check `~/Library/Logs/cicero-chroma.err.log`; restart unit |
 | Agent never invokes `query_cicero_memory_tool` | MCP server unregistered or gateway cached old config | `openclaw mcp list` should show `cicero-memory`; if missing re-run `openclaw mcp set`; restart gateway |
 | Brain-escalation tool never invoked despite trigger phrase | MCP unregistered | `openclaw mcp list` should show `cicero-brain`; re-register if missing; restart gateway |
-| MCP tool errors with `ModuleNotFoundError: mcp` or `anthropic` | Python deps missing | `uv pip install --python ~/miniconda3/envs/cicero-memory/bin/python mcp anthropic` |
+| MCP tool errors with `ModuleNotFoundError: mcp` or `anthropic` | Python deps missing | `cd ~/cicero && uv sync` |
 | iMessage: `authorization denied (code: 23)` | Full Disk Access not granted to the imsg binary | Grant FDA to imsg and node in System Settings |
 | iMessage: messages from Carlos ignored | `allowFrom` identifier mismatch | `sqlite3 ~/Library/Messages/chat.db "SELECT id FROM handle ORDER BY ROWID DESC LIMIT 10;"` — update `allowFrom` |
 | iMessage: channel shows `exited` in logs | FDA revoked (common after macOS update) | Re-grant permissions, restart gateway |
@@ -169,15 +163,15 @@ The `cicero-memory` skill is backed by a local Chroma server holding semanticall
 | `~/Library/LaunchAgents/ai.cicero.chroma.plist` | launchd unit for the Chroma server |
 | `~/Library/Logs/cicero-chroma.{out,err}.log` | Server logs |
 
-Server runs at `127.0.0.1:8000`, collection `cicero_memory`, embeddings via `all-MiniLM-L6-v2` (384-dim, cosine). Python env: conda `cicero-memory` (3.11) with packages installed via `uv`.
+Server runs at `127.0.0.1:8000`, collection `cicero_memory`, embeddings via `all-MiniLM-L6-v2` (384-dim, cosine). Python env: `~/cicero/.venv` (uv-managed, Python 3.14).
 
 ### Operating
 
 ```bash
 curl -fsS http://127.0.0.1:8000/api/v2/heartbeat              # health
 launchctl kickstart -k "gui/$(id -u)/ai.cicero.chroma"        # restart Chroma
-~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py             # re-ingest (idempotent)
-~/miniconda3/envs/cicero-memory/bin/python ~/cicero/scripts/ingest_memory.py --dry-run   # preview chunks
+~/cicero/.venv/bin/python ~/cicero/scripts/ingest_memory.py             # re-ingest (idempotent)
+~/cicero/.venv/bin/python ~/cicero/scripts/ingest_memory.py --dry-run   # preview chunks
 openclaw mcp list                                              # inspect MCP registrations
 openclaw mcp show cicero-memory
 cicero gateway restart                                         # apply MCP config changes

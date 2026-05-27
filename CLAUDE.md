@@ -10,6 +10,9 @@ This repo is Cicero's configuration — personality, workspace files, skills, de
 
 ```
 cicero/
+├── .env                    API keys (gitignored). ANTHROPIC_API_KEY=sk-ant-...
+├── pyproject.toml          Python deps (uv-managed). Run: uv sync
+├── .venv/                  [gitignored] Repo-local Python venv.
 ├── workspace/              Live files — symlinked to ~/.openclaw/workspace
 │   ├── SOUL.md             Voice and behavioral rules.
 │   ├── IDENTITY.md         Cicero/Edmund Hargreaves — short factual block.
@@ -29,7 +32,7 @@ cicero/
 ├── data/                   [gitignored] Chroma vector store.
 ├── deploy/mac/
 │   ├── setup.sh                       Idempotent Mac installer.
-│   ├── ai.openclaw.gateway.plist      launchd unit template (token templated).
+│   ├── ai.openclaw.gateway.plist      launchd unit template (token + API key templated).
 │   ├── ai.cicero.chroma.plist         launchd unit for the Chroma server.
 │   └── ai.cicero.token-rotate.plist   Scheduled gateway token rotation.
 ├── scripts/
@@ -86,14 +89,14 @@ Files in `workspace/` are read at session start and injected into the system pro
 
 The default brain is set in `~/.openclaw/openclaw.json` under `agents.defaults.model.primary` (currently `anthropic/claude-haiku-4-5`).
 
-1. Pick the new model from `openclaw infer model list | grep '"provider":"anthropic"'`.
+1. Pick the new model from `openclaw models list | grep anthropic`.
 2. `openclaw config set agents.defaults.model.primary anthropic/<model-id>`.
 3. Update `workspace/TOOLS.md` brain table.
-4. Update `deploy/mac/setup.sh` so a fresh install picks the new default.
+4. Update `deploy/mac/setup.sh` (`MODEL_REF`) so a fresh install picks the new default.
 5. `cicero gateway restart`.
 6. Smoke test:
    ```bash
-   openclaw agent --agent main --session-id "t-$(date +%s%N)" --message "What's your name and what tools do you have?"
+   cicero ask "What's your name and what tools do you have?"
    ```
 
 ### Changing the escalation models
@@ -106,8 +109,8 @@ Skills live in `workspace/skills/<skill-name>/`. Each needs a `SKILL.md` that Op
 
 To add one:
 1. Create `workspace/skills/<skill-name>/SKILL.md`.
-2. If the skill needs a tool, write `lib/<skill>_mcp.py` using FastMCP (`from mcp.server.fastmcp import FastMCP`).
-3. Register: `openclaw mcp set <skill> '{"command":"<python>","args":["<repo>/lib/<skill>_mcp.py"]}'`.
+2. If the skill needs a tool, write `lib/<skill>_mcp.py` using FastMCP (`from mcp.server.fastmcp import FastMCP`). Add any new deps to `pyproject.toml` and run `uv sync`.
+3. Register: `openclaw mcp set <skill> "{\"command\":\"$HOME/cicero/.venv/bin/python\",\"args\":[\"$HOME/cicero/lib/<skill>_mcp.py\"]}"`.
 4. `cicero gateway restart`.
 5. Test in a fresh session: `cicero ask "use the <skill> skill to ..."`
 
@@ -118,7 +121,7 @@ cd ~/cicero
 ./deploy/mac/setup.sh
 ```
 
-The script is idempotent. It installs Node + OpenClaw, registers the Anthropic provider with your API key, registers the MCP servers, creates the workspace symlink, installs the launchd units, and starts the gateway.
+The script is idempotent. It reads `ANTHROPIC_API_KEY` from `.env` (or the environment), installs Node + OpenClaw + `uv`, syncs the Python venv, registers MCP servers, creates the workspace symlink, installs the launchd units (with the API key baked into the gateway plist environment), and starts the gateway. No interactive steps required.
 
 If it stops asking for `openclaw onboard`, that means `~/.openclaw/openclaw.json` is missing on a truly fresh machine — let it run.
 
@@ -136,8 +139,9 @@ If `skipBootstrap: true` is present, remove it (`setup.sh` does this automatical
 |---|---|
 | `~/cicero/` | This repo |
 | `~/.openclaw/openclaw.json` | OpenClaw runtime config |
-| `~/.openclaw/agents/main/agent/auth-profiles.json` | Anthropic provider credentials |
-| `~/.config/anthropic/api_key` | API key for brain-escalation MCP (mode 0600) |
+| `~/cicero/.env` | `ANTHROPIC_API_KEY` source (gitignored) |
+| `~/cicero/.venv/` | Python venv (uv-managed, gitignored) |
+| `~/.config/anthropic/api_key` | API key copy for brain MCP (written by setup.sh, mode 0600) |
 | `~/.openclaw/workspace` | Symlink → `~/cicero/workspace` |
 | `~/.openclaw/agents/main/sessions/` | Session trajectories |
 | `~/Library/LaunchAgents/ai.openclaw.gateway.plist` | Gateway launchd unit |
