@@ -58,13 +58,9 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   log "using ANTHROPIC_API_KEY from environment"
 elif [ -f "$REPO_ROOT/.env" ]; then
   # Use python3 to parse .env — handles spaces, quotes, and export keyword reliably
-  api_key="$(python3 - "$REPO_ROOT/.env" <<'PY'
-import re, sys, pathlib
-raw = pathlib.Path(sys.argv[1]).read_text()
-m = re.search(r'ANTHROPIC_API_KEY\s*=\s*["\']?([A-Za-z0-9_\-]+)', raw)
-print(m.group(1) if m else "")
-PY
-)"
+  api_key="$(CICERO_DOTENV="$REPO_ROOT/.env" python3 -c \
+    'import re,os,pathlib; t=pathlib.Path(os.environ["CICERO_DOTENV"]).read_text(); m=re.search(r"ANTHROPIC_API_KEY\s*=\s*[^\w]?([A-Za-z0-9_-]+)",t); print(m.group(1) if m else "")' \
+    2>/dev/null)"
   [ -n "$api_key" ] && log "using ANTHROPIC_API_KEY from $REPO_ROOT/.env"
 fi
 if [ -z "$api_key" ] && [ -r "$ANTHROPIC_KEY_FILE" ]; then
