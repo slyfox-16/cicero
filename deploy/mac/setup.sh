@@ -127,15 +127,7 @@ fi
 # 7. Register / refresh the Anthropic API key with the OpenClaw provider
 # OpenClaw 2026.5.x uses `openclaw models auth login` (interactive).
 # We check whether auth is already present; if not, prompt the user to run it manually.
-log "checking anthropic provider auth"
-if openclaw models auth status --provider anthropic 2>/dev/null | grep -q "anthropic"; then
-  log "anthropic provider already authenticated"
-else
-  warn "Anthropic API key not registered with OpenClaw."
-  warn "Run interactively: openclaw models auth login --provider anthropic"
-  warn "Choose 'Anthropic API key' and paste: $ANTHROPIC_KEY_FILE"
-  warn "Then re-run setup.sh or just: cicero gateway restart"
-fi
+log "anthropic API key injected into gateway plist env — no interactive auth login needed"
 
 # 8. Pin the agent default model to Haiku, sync gateway token, ensure clean state
 python3 - "$OPENCLAW_CONFIG" "$token" "$MODEL_REF" <<'PY'
