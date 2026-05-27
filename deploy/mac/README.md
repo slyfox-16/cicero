@@ -1,11 +1,13 @@
 # Mac Deploy
 
-Idempotent bootstrap for Cicero on macOS (Apple Silicon or Intel). Mac equivalent of `deploy/saturn/`.
+Idempotent bootstrap for Cicero on macOS (Apple Silicon). Active deploy path.
 
 ## Prerequisites
 
 - Homebrew (https://brew.sh)
-- Ollama.app installed and running (https://ollama.com/download/mac) — the script will not install Ollama for you, because the .app variant manages its own launchd agent.
+- An Anthropic API key. The script will fail with a clear message if it can't find one. Put it at either:
+  - `~/.config/anthropic/api_key` (mode 0600), or
+  - the `ANTHROPIC_API_KEY` env var (also fine, but the file is preferred so the brain MCP can read it without you re-sourcing your shell).
 
 ## Install
 
@@ -14,35 +16,53 @@ cd ~/cicero
 ./deploy/mac/setup.sh
 ```
 
-If `~/.openclaw/openclaw.json` is missing, the script will stop and ask you to run `openclaw onboard` once interactively. Then re-run the script to finish installing the launchd agent, syncing the gateway token, and wiring up the `cicero` CLI.
+If `~/.openclaw/openclaw.json` is missing, the script will run `openclaw onboard` non-interactively. On a truly fresh machine with no prior OpenClaw state, this may require one interactive pass — re-run if it stops.
 
 ## What it does
 
-- Installs Node via Homebrew if missing
+- Installs Node and `gh` via Homebrew if missing
 - Installs OpenClaw via `npm install -g openclaw@latest`
-- Pulls model `qwen3:30b-a3b` via Ollama if missing
+- Installs `imsg` (`steipete/tap/imsg`) for the iMessage bridge
+- Validates the Anthropic API key and registers it with the OpenClaw `@openclaw/anthropic-provider`
+- Pins `agents.defaults.model.primary` to `anthropic/claude-haiku-4-5`
+- Enables the DuckDuckGo and `@openclaw/imessage` plugins
 - Symlinks `~/.openclaw/workspace` → `<repo>/workspace`
-- Installs `~/Library/LaunchAgents/ai.openclaw.gateway.plist` with a freshly generated gateway token and syncs the token into `~/.openclaw/openclaw.json`
-- Symlinks `~/.local/bin/cicero` → `scripts/cicero` and adds `~/.local/bin` to `PATH` in `.zshrc`
-- Starts the gateway via `launchctl`
+- Registers MCP servers: `cicero-memory` (Chroma) and `cicero-brain` (big_brain / galaxy_brain)
+- Installs launchd units with a freshly generated gateway token:
+  - `ai.openclaw.gateway` — the gateway
+  - `ai.cicero.chroma` — the Chroma server
+  - `ai.cicero.token-rotate` — semiannual gateway token rotation
+- Symlinks `~/.local/bin/cicero` → `scripts/cicero` and adds `~/.local/bin` to `PATH`
+- Starts everything via `launchctl`
 
-Re-runnable. The token is generated only on the first install — delete `~/Library/LaunchAgents/ai.openclaw.gateway.plist` to force a fresh one.
+Re-runnable. The gateway token is generated only on the first install — delete `~/Library/LaunchAgents/ai.openclaw.gateway.plist` to force a fresh one.
 
 ## Diagnostics
 
 ```bash
 cicero gateway status
 cicero gateway logs
+openclaw infer model auth status
 curl -sf http://127.0.0.1:18789/
+curl -sf http://127.0.0.1:8000/api/v2/heartbeat
+tail -f ~/Library/Logs/cicero-brain.log | jq .
 ```
 
-## Known config workarounds
+## Known config notes
 
-### Runtime Config Notes
+### Workspace bootstrap
 
-#### Persona persistence (added 2026-05-16)
+After any `openclaw onboard`, OpenClaw can set `skipBootstrap: true` in `agents.defaults`, which prevents workspace files from injecting. `setup.sh` removes it on every run. To check manually:
 
-These keys live inside `agents.defaults` in `~/.openclaw/openclaw.json`. They are not written by `setup.sh` — merge them manually after onboarding if missing:
+```bash
+openclaw config get agents.defaults
+```
+
+If you see `skipBootstrap: true`, remove it and restart the gateway.
+
+### Persona persistence
+
+These keys live inside `agents.defaults`. They are not written by `setup.sh` — merge manually if you want them, after onboarding:
 
 ```json
 "personaPersistence": {
@@ -57,36 +77,6 @@ These keys live inside `agents.defaults` in `~/.openclaw/openclaw.json`. They ar
 }
 ```
 
-- `reinjectInterval 3`: SOUL.md re-injected every 3 turns to fight context-window persona drift.
-- `mode "enforced"`: active persona adherence monitoring across tool calls and long turns.
-- `contextStrategy "personaFirst"`: SOUL.md takes precedence in assembled system prompt.
+With Haiku 4.5 holding character cleanly, these are less critical than they were on the Ollama-era models, but they don't hurt.
 
 After editing, restart: `cicero gateway restart`
-
-Note: the top-level key is `agents` (plural). OpenClaw rejects an `agent` (singular) key with a schema validation error.
-
----
-
-### Streaming disabled for Ollama (openclaw issues #5769 and #12217)
-
-OpenClaw hardcodes `stream: true` on every model call. Ollama's streaming
-implementation does not emit `tool_calls` delta chunks correctly — the
-streaming response returns empty content with `finish_reason: "stop"`,
-silently dropping any tool call the model generated.
-
-**Workaround:** set `streaming: false` inside the model's `params` block.
-The top-level streaming config field is dead code (issue #12217) and has
-no effect — the fix must be in `params`.
-
-`setup.sh` applies this automatically under `agents.defaults.models.<model>.params`.
-If you ever find tool calls silently failing after a config change, verify this key:
-
-```bash
-python3 -c "
-import json, pathlib
-c = json.loads((pathlib.Path.home() / '.openclaw/openclaw.json').read_text())
-print(c.get('agents',{}).get('defaults',{}).get('models',{}))
-"
-```
-
-Expected: `{'ollama/llama3.1:8b-instruct-q5_K_M': {'params': {'streaming': False}}}`

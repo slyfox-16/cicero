@@ -1,6 +1,6 @@
 # CLAUDE.md — Cicero Repo
 
-This repo is Cicero's configuration — personality, workspace files, skills, and deploy scripts. It is not Cicero itself. The runtime is OpenClaw + Ollama running on minerva. Edits here are live immediately (workspace is symlinked into the running agent).
+This repo is Cicero's configuration — personality, workspace files, skills, deploy scripts, and the MCP servers that back them. It is not Cicero itself. The runtime is OpenClaw on minerva, with inference served by the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`. Edits here are live (workspace is symlinked into the running agent).
 
 **Primary channel:** iMessage at `cicero.ortega@icloud.com`. CLI (`cicero chat` / `cicero ask`) is for development.
 
@@ -10,39 +10,42 @@ This repo is Cicero's configuration — personality, workspace files, skills, an
 
 ```
 cicero/
-├── workspace/              Agent's live files — symlinked to ~/.openclaw/workspace
-│   ├── SOUL.md             Voice and behavioral rules. Edit deliberately.
-│   ├── IDENTITY.md         Name, vibe, surface metadata.
-│   ├── AGENTS.md           Workspace conventions and memory rules.
-│   ├── USER.md             Context about Carlos (the user).
-│   ├── TOOLS.md            Environment specifics — hostnames, models, data sources.
-│   ├── HEARTBEAT.md        Periodic task checklist (currently passive).
+├── workspace/              Live files — symlinked to ~/.openclaw/workspace
+│   ├── SOUL.md             Voice and behavioral rules.
+│   ├── IDENTITY.md         Cicero/Edmund Hargreaves — short factual block.
+│   ├── AGENTS.md           Workspace conventions, memory rules, red lines.
+│   ├── USER.md             Context about Carlos.
+│   ├── TOOLS.md            Environment specifics — host, brain models, data sources.
+│   ├── HEARTBEAT.md        Periodic task checklist (passive — empty by design).
 │   └── skills/             Workspace-level skills, auto-discovered by OpenClaw.
-│       ├── cicero-health/  Stub. Postgres not yet wired.
-│       └── cicero-memory/  Routes to query_cicero_memory_tool MCP server.
-├── lib/                    Importable Python modules + MCP servers.
-│   ├── memory_query.py     query_cicero_memory() — semantic retrieval over Chroma.
-│   └── memory_mcp.py       MCP server exposing query_cicero_memory_tool.
-├── data/                   [gitignored] Chroma vector store. Local-only.
-│   └── chroma/
-├── deploy/
-│   ├── mac/
-│   │   ├── setup.sh                   Idempotent Mac installer (active).
-│   │   └── ai.openclaw.gateway.plist  launchd unit template (token templated).
-│   └── saturn/                        Legacy Linux deploy. Not the active path.
+│       ├── cicero-memory/   → query_cicero_memory_tool (Chroma)
+│       ├── cicero-bigbrain/ → big_brain (Sonnet 4.6) + galaxy_brain (Opus 4.7)
+│       └── cicero-health/   Stub. Postgres pipeline pending.
+├── lib/                    MCP servers + Python libs.
+│   ├── memory_query.py     Semantic retrieval over Chroma.
+│   ├── memory_mcp.py       MCP exposing query_cicero_memory_tool.
+│   ├── brain_mcp.py        MCP exposing big_brain + galaxy_brain (Anthropic SDK).
+│   └── retrieval_middleware.py  Auto-inject memory context into `cicero ask`.
+├── data/                   [gitignored] Chroma vector store.
+├── deploy/mac/
+│   ├── setup.sh                       Idempotent Mac installer.
+│   ├── ai.openclaw.gateway.plist      launchd unit template (token templated).
+│   ├── ai.cicero.chroma.plist         launchd unit for the Chroma server.
+│   └── ai.cicero.token-rotate.plist   Scheduled gateway token rotation.
 ├── scripts/
-│   ├── cicero                         CLI wrapper: `cicero chat` / `cicero ask`
-│   └── ingest_memory.py               Idempotent ingestion of docs/archive/cicero-backstory.md into Chroma.
+│   ├── cicero                          CLI wrapper: chat / ask / gateway
+│   ├── ingest_memory.py                Idempotent ingestion of cicero-backstory.md → Chroma.
+│   └── rotate_token.sh                 Manual gateway token rotation.
 └── docs/
-    ├── architecture.md    Current architecture and repo layout.
-    ├── decisions.md       Key architectural decisions.
-    ├── operations.md      Operational runbook for Minerva.
-    ├── roadmap.md         Upcoming workstreams in priority order.
-    ├── security.md        Operational discipline for running LLMs locally.
-    ├── scope.md           What Cicero is and is not.
+    ├── architecture.md   Current architecture and repo layout.
+    ├── decisions.md      ADRs.
+    ├── operations.md     Runbook for minerva.
+    ├── roadmap.md        Upcoming workstreams.
+    ├── security.md       Operational discipline.
+    ├── scope.md          What Cicero is and is not.
     └── archive/
-        ├── cicero-backstory.md  Seed corpus for the cicero-memory vector store.
-        └── persona.md           ADR: Cicero character persona — end of life.
+        ├── cicero-backstory.md  Seed corpus for cicero-memory.
+        └── persona.md           Historical ADR (reopened with Claude).
 ```
 
 ---
@@ -50,11 +53,11 @@ cicero/
 ## Running Cicero
 
 ```bash
-cicero chat          # TUI session (embedded local agent, no gateway needed)
+cicero chat          # TUI session
 cicero ask "..."     # One-shot via gateway
 ```
 
-Restart gateway (required after openclaw.json changes):
+Restart gateway (required after `openclaw.json` changes, including MCP registrations):
 ```bash
 cicero gateway restart
 ```
@@ -65,48 +68,48 @@ cicero gateway restart
 
 ### Editing personality / behavior
 
-Files in `workspace/` are read at session start and injected into the system prompt. Edits are live — no restart needed for `cicero chat`. For `cicero ask` (gateway path), edits are also live per-session; only `openclaw.json` changes need a gateway restart.
+Files in `workspace/` are read at session start and injected into the system prompt. Edits to `workspace/` are live per-session. `openclaw.json` changes need a gateway restart.
 
 | File | Edit when |
 |---|---|
 | `SOUL.md` | Changing voice, tone, behavioral rules |
-| `IDENTITY.md` | Changing name, vibe, avatar |
+| `IDENTITY.md` | Changing the factual backstory block, name, avatar |
 | `USER.md` | Updating context about Carlos |
-| `TOOLS.md` | Adding a new host, data source, or model |
+| `TOOLS.md` | Adding a host, brain model, or data source |
 | `AGENTS.md` | Changing workspace conventions or memory rules |
 
-**SOUL.md authoring rules:**
-- Keep language natural and descriptive, not imperative or defensive.
-- Do not use aggressive override phrasing ("CRITICAL RULE", "never reveal training") — it causes refusal behavior.
+**SOUL.md authoring rules** (unchanged from prior era):
+- Descriptive, not imperative. Natural prose. No "CRITICAL RULE", no "never reveal training".
 - The identity line that works: `You are Cicero — a personal AI assistant. That is your name and your identity.`
-### Changing the model
 
-1. Pull the model: `ollama pull <model>`
-2. Update `openclaw.json`: `openclaw config get agents.defaults` → edit `model.primary`
-3. Update `deploy/mac/setup.sh`: change the `MODEL=` line
-4. Update `workspace/TOOLS.md`: note the model under the minerva host entry
-5. Restart the gateway: `cicero gateway restart`
-6. **Test tool call support in a fresh session:**
+### Changing the default brain model
+
+The default brain is set in `~/.openclaw/openclaw.json` under `agents.defaults.model.primary` (currently `anthropic/claude-haiku-4-5`).
+
+1. Pick the new model from `openclaw infer model list | grep '"provider":"anthropic"'`.
+2. `openclaw config set agents.defaults.model.primary anthropic/<model-id>`.
+3. Update `workspace/TOOLS.md` brain table.
+4. Update `deploy/mac/setup.sh` so a fresh install picks the new default.
+5. `cicero gateway restart`.
+6. Smoke test:
    ```bash
-   openclaw agent --agent main --session-id "test-$(date +%s%N)" --message "What is your name and what tools do you have available?"
+   openclaw agent --agent main --session-id "t-$(date +%s%N)" --message "What's your name and what tools do you have?"
    ```
-   Expected: answers as Cicero, lists available tools. If tool calls are broken — try a different model.
 
-| Model | Tool Calls | Status |
-|---|---|---|
-| qwen3:8b | ✅ Working | Active primary |
-| llama3.1:8b-instruct-q5_K_M | ✅ Working | Fallback |
+### Changing the escalation models
 
-A viable primary model must support Ollama function calling. Test tool call support before setting any model as primary.
+`lib/brain_mcp.py` pins `BIG_BRAIN_MODEL` and `GALAXY_BRAIN_MODEL`. Edit the constants, run the unit through `python3 lib/brain_mcp.py` once if you want to validate import-time auth, and `cicero gateway restart` to pick up the change in any cached MCP state.
 
 ### Adding or updating a skill
 
-Skills live in `workspace/skills/<skill-name>/`. Each needs a `SKILL.md` that OpenClaw auto-discovers. A real skill also needs a dispatch mechanism (HTTP endpoint or subprocess call) — prose-only skills route inconsistently.
+Skills live in `workspace/skills/<skill-name>/`. Each needs a `SKILL.md` that OpenClaw auto-discovers. Prose-only skills route inconsistently — back them with an MCP server (see `lib/memory_mcp.py` and `lib/brain_mcp.py` for working examples).
 
-To add a skill:
-1. Create `workspace/skills/<skill-name>/SKILL.md` describing what it does and how to invoke it.
-2. Test routing: `cicero ask "use the <skill> skill to ..."` in a fresh session.
-3. If routing is unreliable, add an explicit tool call (HTTP/subprocess) to SKILL.md.
+To add one:
+1. Create `workspace/skills/<skill-name>/SKILL.md`.
+2. If the skill needs a tool, write `lib/<skill>_mcp.py` using FastMCP (`from mcp.server.fastmcp import FastMCP`).
+3. Register: `openclaw mcp set <skill> '{"command":"<python>","args":["<repo>/lib/<skill>_mcp.py"]}'`.
+4. `cicero gateway restart`.
+5. Test in a fresh session: `cicero ask "use the <skill> skill to ..."`
 
 ### Re-running setup (fresh machine or after a wipe)
 
@@ -115,24 +118,15 @@ cd ~/cicero
 ./deploy/mac/setup.sh
 ```
 
-If it stops asking for `openclaw onboard` — that means `~/.openclaw/openclaw.json` is missing. The script now handles this automatically (non-interactive onboard), but on a truly fresh machine with no prior OpenClaw state it will run onboard as part of setup.
+The script is idempotent. It installs Node + OpenClaw, registers the Anthropic provider with your API key, registers the MCP servers, creates the workspace symlink, installs the launchd units, and starts the gateway.
 
-**Critical: after any `openclaw onboard` run**, check for `skipBootstrap`:
+If it stops asking for `openclaw onboard`, that means `~/.openclaw/openclaw.json` is missing on a truly fresh machine — let it run.
+
+**After any `openclaw onboard` run**, check for `skipBootstrap`:
 ```bash
 openclaw config get agents.defaults
 ```
-If `skipBootstrap: true` is present, remove it or workspace files will not inject:
-```bash
-python3 -c "
-import json, pathlib
-p = pathlib.Path.home() / '.openclaw' / 'openclaw.json'
-c = json.loads(p.read_text())
-c['agents']['defaults'].pop('skipBootstrap', None)
-p.write_text(json.dumps(c, indent=2))
-print('done')
-"
-```
-`deploy/mac/setup.sh` removes this automatically on every run.
+If `skipBootstrap: true` is present, remove it (`setup.sh` does this automatically on every run, but worth knowing).
 
 ---
 
@@ -140,10 +134,15 @@ print('done')
 
 | Path | What |
 |---|---|
-| `~/cicero/` | This repo (source of truth) |
-| `~/.openclaw/openclaw.json` | OpenClaw runtime config (model, gateway token, auth) |
+| `~/cicero/` | This repo |
+| `~/.openclaw/openclaw.json` | OpenClaw runtime config |
+| `~/.openclaw/agents/main/agent/auth-profiles.json` | Anthropic provider credentials |
+| `~/.config/anthropic/api_key` | API key for brain-escalation MCP (mode 0600) |
 | `~/.openclaw/workspace` | Symlink → `~/cicero/workspace` |
-| `~/.openclaw/agents/main/` | Session history, agent auth state |
-| `~/Library/LaunchAgents/ai.openclaw.gateway.plist` | launchd gateway unit (rendered from deploy/mac template) |
-| `~/Library/Logs/openclaw-gateway.err.log` | Gateway error log |
+| `~/.openclaw/agents/main/sessions/` | Session trajectories |
+| `~/Library/LaunchAgents/ai.openclaw.gateway.plist` | Gateway launchd unit |
+| `~/Library/LaunchAgents/ai.cicero.chroma.plist` | Chroma launchd unit |
+| `~/Library/Logs/openclaw-gateway.{out,err}.log` | Gateway logs |
+| `~/Library/Logs/cicero-chroma.{out,err}.log` | Chroma logs |
+| `~/Library/Logs/cicero-brain.log` | Per-call spend log for big-brain / galaxy-brain |
 | `~/.local/bin/cicero` | CLI shim → `~/cicero/scripts/cicero` |

@@ -30,7 +30,8 @@ See [SOUL.md](./SOUL.md). No emojis. No filler. Concise, structured, direct. Do 
 
 Skills register tools. See `TOOLS.md` for environment-specific notes (hostnames, paths, device names).
 
-- **`cicero-memory`** is **live**. The `cicero-memory__query_cicero_memory_tool` tool searches a local Chroma vector store containing Cicero's biographical history, behavioral patterns (`character_residue` chunks), and operational background. Call it whenever the user asks about Cicero's past, his stance on something, what he remembers, or anything not present in the loaded workspace files. Do not answer from base-model training when this tool would yield grounded results.
+- **`cicero-memory`** is **live**. The `query_cicero_memory_tool` searches a local Chroma vector store containing Cicero's biographical history, behavioral patterns (`character_residue` chunks), and operational background. Call it whenever the user asks about Cicero's past, his stance on something, what he remembers, or anything not present in the loaded workspace files. Do not answer from base-model training when this tool would yield grounded results.
+- **`cicero-bigbrain`** is **live**. Exposes `big_brain` (Sonnet 4.6) and `galaxy_brain` (Opus 4.7) tools. Invoke when Carlos uses those phrases in a message; deliver the returned answer verbatim. See [skills/cicero-bigbrain/SKILL.md](./skills/cicero-bigbrain/SKILL.md).
 - **`cicero-health`** is still a stub; the health-data ingestion workstream is upcoming.
 
 ## Heartbeats

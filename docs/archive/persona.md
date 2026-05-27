@@ -1,7 +1,9 @@
 # ADR: Cicero Persona — End of Life
 
-**Status:** Superseded  
-**Date:** 2026-05-17
+**Status:** Reopened 2026-05-26. Persona enforcement is back, no special rules needed — with Claude Haiku 4.5 as the brain, character voice holds without persona-compliance scaffolding. SOUL.md and IDENTITY.md have been rewritten in Cicero's voice, and the Chroma corpus is re-ingested. See `docs/decisions.md` for the Anthropic-API ADR. The historical record below is preserved for context.
+
+**Original status:** Superseded
+**Original date:** 2026-05-17
 
 ---
 

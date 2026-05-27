@@ -1,31 +1,28 @@
 # Roadmap
 
-Living planning document. Reflects decided direction, known blockers, and open design questions as of 2026-05.
+Living planning document. As of 2026-05.
 
 ---
 
-## Current State
+## Current state
 
-Cicero is operational on Minerva. This is the baseline.
+Cicero is operational on minerva.
 
-- OpenClaw 2026.5.x + Ollama (MLX backend, Apple Silicon)
-- Primary model: `qwen3:8b`. Fallback: `llama3.1:8b-instruct-q5_K_M`.
-- SOUL.md / IDENTITY.md injected every session (character voice removed; operational rules retained)
-- `cicero-health` stub registered (no backend yet)
-- `cicero-memory` fully wired: Chroma + MCP (`memory_mcp.py` → `memory_query.py`), launchd-managed
-- Chroma running on Minerva (loopback, launchd-managed)
-- CLI-only channel
+- OpenClaw 2026.5.x with native `@openclaw/anthropic-provider`
+- Default brain: `claude-haiku-4-5`
+- Escalation: `big_brain` → `claude-sonnet-4-6`, `galaxy_brain` → `claude-opus-4-7`, both via `lib/brain_mcp.py`
+- Workspace files (SOUL, IDENTITY, USER, TOOLS, AGENTS) injected every session — full Cicero voice restored with Haiku
+- `cicero-memory` fully wired: Chroma + MCP, launchd-managed; corpus re-ingested from `cicero-backstory.md`
+- `cicero-bigbrain` skill live
+- `cicero-health` still a stub
+- iMessage channel live (`cicero.ortega@icloud.com`, allowlist)
+- CLI live (`cicero chat`, `cicero ask`)
 
 ---
 
 ## Phase 5 — Documentation
 
-**Status:** Complete
-
-Overhauled `docs/` to describe what Cicero currently is. Ground-truth reference, not a design journal.
-
-Files in scope: architecture.md, security.md, decisions.md, scope.md, note.md, roadmap.md.  
-Excluded: cicero-backstory.md.
+**Status:** Complete (rewritten 2026-05-26 to reflect the Anthropic API migration).
 
 ---
 
@@ -33,39 +30,20 @@ Excluded: cicero-backstory.md.
 
 **Status:** Complete
 
-Minerva, Jupiter, and Saturn added to Tailscale — Cicero is reachable from Jupiter via SSH over Tailscale. Minerva configured to never sleep and restart after power failure. Both launchd services (`ai.openclaw.gateway`, `ai.cicero.chroma`) confirmed with `KeepAlive: true`; both plists are now managed by `setup.sh` so a fresh machine gets them automatically. Gateway token rotation scripted (`scripts/rotate_token.sh`) and scheduled via launchd every 6 months (Jan 1 and Jul 1); procedure documented in `docs/operations.md`.
+minerva on Tailscale, never-sleep, restart on power failure. `ai.openclaw.gateway` and `ai.cicero.chroma` both `KeepAlive: true`, both rendered by `setup.sh`. Gateway token rotation scheduled (Jan 1, Jul 1). API key handling documented in `docs/security.md`.
 
 ---
 
-## Phase 7 — Big Brain Mode (Claude API Escalation)
+## Phase 7 — Big Brain Mode
 
-**Status:** Planned  
-**Depends on:** Anthropic API key configured on Minerva
+**Status:** Complete (2026-05-26)
 
-### 1.0
+Implemented as MCP tools in `lib/brain_mcp.py`, exposed as the `cicero-bigbrain` skill. Triggers are the phrases "big brain" (→ Sonnet 4.6) and "galaxy brain" (→ Opus 4.7) anywhere in the user's message. Cicero strips the trigger and delivers the larger model's answer verbatim. Each call logs to `~/Library/Logs/cicero-brain.log`.
 
-- Invoked via slash command: `/bigbrain`
-- Routes that single message to Claude Sonnet via the Anthropic API
-- Returns to local model immediately after — no persistent mode change
-- Full persona (SOUL.md), all skills, all tools, and Chroma access remain active during the escalated call — behavior is identical to local model except for the underlying inference
-- Conversation history is not passed to Sonnet — single message only
-- No confirmation step required
-
-### 2.0 (deferred)
-
-- Full conversation context passed to Sonnet on `/bigbrain` invocation
-
-### Galaxy Brain — `/galaxybrain` (Opus)
-
-**Status:** TBD — documented future item, not part of this phase
-
-- Deferred due to Opus pricing risk — no current use case justifies the cost
-- If ever implemented: single message only, no context passing, always
-- Revisit only if a concrete task arises that Sonnet cannot handle
-
-### Open Design Question
-
-Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. Confirm Chroma and registered skills are visible to Sonnet during `/bigbrain` calls. Check openclaw.ai docs before implementing — may require explicit configuration.
+Open follow-ups, monitored not blocked:
+- Iterate on the trigger phrasing once we have real iMessage usage. If "big brain" gets caught by accident or missed when intended, adjust SKILL.md.
+- Add a spend cap if monthly usage materially exceeds projection.
+- Decide whether to pass conversation context into escalations by default. Currently the skill exposes `context` as an optional argument; Haiku can populate it.
 
 ---
 
@@ -73,116 +51,66 @@ Verify OpenClaw 2026.5.x tool and skill passthrough behavior for API backends. C
 
 **Status:** Complete
 
-### Apple ID
-
-- Apple ID created with iCloud email: `cicero.ortega@icloud.com`
-- Signed into Messages.app on Minerva
-
-### iMessage Integration
-
-- OpenClaw `@openclaw/imessage` plugin enabled with `imsg` CLI (basic mode, no SIP changes)
-- `imsg` installed via Homebrew (`steipete/tap/imsg`)
-- DM policy: `allowlist` — only authorized senders can message Cicero
-- Authorized senders: Carlos (`carlos.m.ortega16@gmail.com`); wife TBD (append to `allowFrom`)
-- Group chats: disabled
-- Catchup enabled — replays missed messages after gateway restarts (up to 60 min, 50 messages)
-- Message coalescing enabled (`coalesceSameSenderDms`) for command + URL in one turn
-- Cicero responds only when messaged — no proactive outreach in this phase
-- This is the primary communication channel; CLI is for development
+Apple ID `cicero.ortega@icloud.com` signed into Messages.app on minerva. `@openclaw/imessage` + `imsg` CLI wired. DM allowlist (Carlos only), groups disabled, catchup enabled, message coalescing on. Cicero responds only when messaged.
 
 ---
 
 ## Phase 9 — Apple Reminders
 
-**Status:** Planned  
-**Depends on:** Phase 8 (Complete)
+**Status:** Planned. Depends on: nothing blocking.
 
-- Cicero is list owner of the shared chore list
-- Owner and wife are collaborators
-- Cicero can create reminders and assign them to specific collaborators
-- After adding a time-sensitive item, Cicero sends an iMessage to the assignee — intended to trigger Apple Intelligence reminder suggestion on their device
-- Grocery list and other shared lists: Cicero is collaborator only, not owner — no assignment needed
+- Cicero is owner of the shared chore list.
+- Owner and wife are collaborators.
+- Cicero can create reminders and assign them to specific collaborators.
+- After adding a time-sensitive item, Cicero sends an iMessage to the assignee.
+- Grocery list and other shared lists: Cicero is collaborator only.
 
-**Out of scope for this phase:**
-- Location-based triggers
-- Time-based nudges (deferred to 2.0)
-
-**2.0 (deferred):**
-- Time-based nudges: Cicero sends an iMessage to the assignee at a specified time for items that require it
-- Location-based triggers: explicitly out of scope, not planned
-
-**Open Design Question:**
-Which lists does Cicero own vs. collaborate on? Chore list confirmed as owner. All others TBD at implementation time.
+Out of scope for this phase: location-based triggers, time-based nudges (deferred to 2.0).
 
 ---
 
 ## Phase 10 — Postgres Integration
 
-**Status:** Planned  
-**Depends on:** Data pipelines (external projects, built independently of Cicero — status TBD)
+**Status:** Planned. Depends on: external data pipelines (status TBD).
 
-- Postgres instance running on Saturn
-- Two candidate pipelines being built separately as independent projects:
-  1. Apple Health data ingestion (Apple Health + Heavy workout app)
-  2. Personal finance data (Monarch Money)
-- Pipeline documentation will be provided when ready — Cicero skill implementation follows from that documentation
-- Cicero starts with read-only access; write access added as use cases emerge
-- `cicero-health` stub already registered — real implementation follows pipeline completion
-
-Note: pipelines are independent projects. Do not block Cicero roadmap progress on them. Treat as TBD until documentation is provided.
+- Postgres instance on Saturn.
+- Two candidate pipelines (independent projects):
+  1. Apple Health + Heavy workout app
+  2. Personal finance (Monarch Money)
+- Cicero starts read-only; write access added as use cases emerge.
+- `cicero-health` stub already registered.
 
 ---
 
-## Phase 11 — Google Calendar / iCal
+## Phase 11 — Calendar (Google + iCal)
 
-**Status:** Planned  
-**Depends on:** Nothing blocking — setup details require definition before implementation
+**Status:** Planned. Setup details require definition before implementation.
 
-- Cicero reads both iCal (iCloud) and Google Calendar
-- Read-only to start; write access added as use cases emerge
-- Work calendar: goal is shared read access for full schedule visibility — setup details TBD
-- Wife's calendar: TBD — may be needed for chore and reminder coordination
-- Authentication: OAuth with personal Google account for Google Calendar; iCloud CalDAV for iCal
-
-**Open Design Question:**
-Calendar setup and any required account or sharing changes need to be defined before implementation begins. Confirm whether the work calendar can be shared with read access and what that requires.
+- Read both iCal (iCloud) and Google Calendar; read-only to start.
+- Work calendar: shared read access ideal; details TBD.
+- Auth: OAuth (Google) + CalDAV (iCloud).
 
 ---
 
 ## Phase 12 — Google Drive
 
-**Status:** Planned  
-**Depends on:** Nothing blocking
+**Status:** Planned. Lowest priority.
 
-- Read-only to start; write access added as use cases emerge
-- Authentication: OAuth with personal Google account
-- No specific use case defined yet — capability established for future use
-- Lowest priority integration
+- Read-only initially. OAuth with personal Google account.
 
 ---
 
-## Phase 13 — Mac Mini Migration
+## Phase 13 — Future hardware
 
-**Status:** Planned  
-**Depends on:** Phase 8 (Complete — Apple ID exists, iMessage enabled on Minerva)
+**Status:** Speculative.
 
-- Minerva is the current Cicero machine; Mac mini is the long-term target
-- At migration:
-  - Fresh machine setup via `deploy/mac/setup.sh` (not yet written)
-  - `brew install ollama openclaw`
-  - `ollama pull qwen3:8b llama3.1:8b-instruct-q5_K_M`
-  - iMessage channel enabled (requires Cicero Apple ID — see Phase 8)
-  - Minerva instance decommissioned
-- What does not change: `workspace/`, skills, model config
+The Mac mini migration that was on the prior roadmap is moot — minerva *is* the Mac mini. Documented here only to retire the item. Workspace, skills, and MCPs are portable to any future Mac; the deploy script does the heavy lifting.
 
 ---
 
-## Future / Unscheduled
+## Future / unscheduled
 
-Items with no defined phase.
-
-- Proactive messages and scheduled reports via iMessage and/or email
-- Time-based reminder nudges (2.0 scope from Phase 9)
-- Galaxy brain mode (`/galaxybrain` via Opus) — deferred indefinitely; single message only if ever implemented, no context passing
-- Additional skills: garden, home, reminders
-- Write access to Postgres, Google Drive, Google Calendar
+- Proactive messages and scheduled reports via iMessage and email.
+- Time-based reminder nudges (Phase 9 2.0).
+- Additional skills: garden, home automation, journaling.
+- Per-tool spend caps once usage data justifies them.
