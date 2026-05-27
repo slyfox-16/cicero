@@ -57,12 +57,14 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   api_key="$ANTHROPIC_API_KEY"
   log "using ANTHROPIC_API_KEY from environment"
 elif [ -f "$REPO_ROOT/.env" ]; then
-  # Parse .env tolerantly: strip spaces, quotes, and export keyword
-  api_key="$(grep -E '^[[:space:]]*(export[[:space:]]+)?ANTHROPIC_API_KEY' "$REPO_ROOT/.env" \
-    | head -1 \
-    | sed 's/^[[:space:]]*(export[[:space:]]+)?ANTHROPIC_API_KEY[[:space:]]*=[[:space:]]*//' \
-    | tr -d '"'"'"' ' \
-    | tr -d '[:space:]')"
+  # Use python3 to parse .env — handles spaces, quotes, and export keyword reliably
+  api_key="$(python3 - "$REPO_ROOT/.env" <<'PY'
+import re, sys, pathlib
+raw = pathlib.Path(sys.argv[1]).read_text()
+m = re.search(r'ANTHROPIC_API_KEY\s*=\s*["\']?([A-Za-z0-9_\-]+)', raw)
+print(m.group(1) if m else "")
+PY
+)"
   [ -n "$api_key" ] && log "using ANTHROPIC_API_KEY from $REPO_ROOT/.env"
 fi
 if [ -z "$api_key" ] && [ -r "$ANTHROPIC_KEY_FILE" ]; then
