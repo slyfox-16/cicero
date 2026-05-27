@@ -25,12 +25,12 @@ usage() {
 # Returns the (possibly augmented) message on stdout.
 _maybe_inject() {
   local msg="$1"
-  "$PYTHON" - "$msg" <<'PY' 2>/dev/null
+  CICERO_REPO_ROOT="$REPO_ROOT" "$PYTHON" - "$msg" <<'PY' 2>/dev/null
 import sys, os, pathlib
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "lib"))
+sys.path.insert(0, str(pathlib.Path(os.environ["CICERO_REPO_ROOT"]) / "lib"))
 from retrieval_middleware import maybe_retrieve
 msg = sys.argv[1]
 ctx = maybe_retrieve(msg)
