@@ -40,7 +40,7 @@ case "${1:-}" in
     [[ $# -lt 2 ]] && usage
     RAW_MSG="${*:2}"
     FULL_MSG="$(_maybe_inject "$RAW_MSG")"
-    exec openclaw agent --agent main --message "$FULL_MSG"
+    exec openclaw agent --agent main --session-id "ask-$(date +%s%N)" --message "$FULL_MSG"
     ;;
   gateway)
     case "${2:-}" in
