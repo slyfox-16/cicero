@@ -51,17 +51,25 @@ else
 fi
 
 # 3. Anthropic API key — required for both the OpenClaw provider and the brain MCP
+# Resolution order: env var → .env file in repo root → key file
 api_key=""
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   api_key="$ANTHROPIC_API_KEY"
   log "using ANTHROPIC_API_KEY from environment"
-elif [ -r "$ANTHROPIC_KEY_FILE" ]; then
-  api_key="$(tr -d '[:space:]' < "$ANTHROPIC_KEY_FILE")"
-  log "using API key from $ANTHROPIC_KEY_FILE"
-else
-  die "Anthropic API key not found. Set ANTHROPIC_API_KEY or write the key to $ANTHROPIC_KEY_FILE (mode 0600)."
+elif [ -f "$REPO_ROOT/.env" ]; then
+  # Parse .env tolerantly: strip spaces, quotes, and export keyword
+  api_key="$(grep -E '^[[:space:]]*(export[[:space:]]+)?ANTHROPIC_API_KEY' "$REPO_ROOT/.env" \
+    | head -1 \
+    | sed 's/^[[:space:]]*(export[[:space:]]+)?ANTHROPIC_API_KEY[[:space:]]*=[[:space:]]*//' \
+    | tr -d '"'"'"' ' \
+    | tr -d '[:space:]')"
+  [ -n "$api_key" ] && log "using ANTHROPIC_API_KEY from $REPO_ROOT/.env"
 fi
-[ -n "$api_key" ] || die "Anthropic API key is empty."
+if [ -z "$api_key" ] && [ -r "$ANTHROPIC_KEY_FILE" ]; then
+  api_key="$(tr -d '[:space:]' < "$ANTHROPIC_KEY_FILE")"
+  [ -n "$api_key" ] && log "using API key from $ANTHROPIC_KEY_FILE"
+fi
+[ -n "$api_key" ] || die "Anthropic API key not found. Add it to $REPO_ROOT/.env as ANTHROPIC_API_KEY=sk-ant-... or write it to $ANTHROPIC_KEY_FILE (mode 0600)."
 
 # Mirror the key into the file so the brain MCP can read it regardless of shell state
 mkdir -p "$(dirname "$ANTHROPIC_KEY_FILE")"
@@ -252,6 +260,7 @@ sed \
   -e "s|__HOME__|$HOME|g" \
   -e "s|__NODE_BIN__|$node_bin|g" \
   -e "s|__OPENCLAW_ENTRY__|$openclaw_entry|g" \
+  -e "s|__ANTHROPIC_API_KEY__|$api_key|g" \
   "$PLIST_SRC" > "$tmp_plist"
 
 needs_bootstrap=0

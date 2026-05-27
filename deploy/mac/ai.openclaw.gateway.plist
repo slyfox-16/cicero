@@ -28,6 +28,8 @@
         <string>openclaw</string>
         <key>OPENCLAW_SERVICE_KIND</key>
         <string>gateway</string>
+        <key>ANTHROPIC_API_KEY</key>
+        <string>__ANTHROPIC_API_KEY__</string>
     </dict>
 
     <key>RunAtLoad</key>
