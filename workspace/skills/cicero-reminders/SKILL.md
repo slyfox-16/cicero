@@ -39,19 +39,23 @@ Anything that belongs in Reminders rather than Notes — anything with a due dat
 | Set priority (high / medium / low / none) | `reminders_tasks` |
 | Location reminders, recurrence, due date, notes | `reminders_tasks` |
 
-## Tags — DO NOT USE
+## Tags — DO NOT USE, IN ANY FORM
 
-Apple's tag system parses hashtags in titles on iOS via UI input only. Reminders created via EventKit (which is what Cicero uses) **do not get auto-tagged** — the `#whatever` just sits in the title as plain text and clutters the view.
+**Total prohibition.** No tags on any reminder, by any mechanism. This includes:
 
-**Rule: never put `#tags` in reminder titles.** Write clean, plain titles.
+- **No `#tag` text inside the title.** Don't write "Buy milk #dairy" or any variant.
+- **No value passed to the `tags` parameter on `reminders_tasks`.** Leave it empty, omit it, or pass `[]`. The FradSer MCP exposes a `tags` arg that sets a real EventKit tag — do not use it.
+- **No tag/category emoji in the title.** No 🏷️, no 🥬, no 🥩, no decorative markers of any kind. Titles are plain English text only.
+- **No tag-equivalent prefixes or suffixes** ("[Produce] Lettuce", "Lettuce (dairy)", etc.).
 
-For categorization, use these alternatives:
+Why: tags don't render cleanly across the surfaces our family actually uses. Apple's built-in grocery sort already categorizes Groceries items; Honeydew and Garden don't need cross-cutting filters. Visual clutter loses more than the filter gains.
+
+**For categorization, use these alternatives only:**
 - **Lists themselves** are the primary category. Groceries, Honeydew, Garden are already segmented.
-- **Apple's built-in grocery category sort** handles produce/dairy/etc. on the Groceries list automatically — no help needed from Cicero.
 - **Priority** (`reminders_tasks` priority field: high / medium / low / none) for urgency. Use sparingly; default to none.
 - **Due date** for time-sensitive items.
 
-If the user explicitly asks Cicero to tag something, comply but mention once that tags from EventKit-created reminders show as plain text, not as Apple tag chips.
+**If the user explicitly asks Cicero to tag something:** politely decline once, say "tags from this path don't render as proper Apple tag chips, so I'm leaving them off. You can add tags directly in the Reminders app and they'll work the way you expect." Then write the reminder tag-free.
 
 ## What Cicero Cannot Do
 
