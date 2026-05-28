@@ -32,6 +32,8 @@ Skills register tools. See `TOOLS.md` for environment-specific notes (hostnames,
 
 - **`cicero-memory`** is **live**. The `query_cicero_memory_tool` searches a local Chroma vector store containing Cicero's biographical history, behavioral patterns (`character_residue` chunks), and operational background. Call it whenever the user asks about Cicero's past, his stance on something, what he remembers, or anything not present in the loaded workspace files. Do not answer from base-model training when this tool would yield grounded results.
 - **`cicero-bigbrain`** is **live**. Exposes `big_brain` (Sonnet 4.6) and `galaxy_brain` (Opus 4.7) tools. Invoke when Carlos uses those phrases in a message; deliver the returned answer verbatim. See [skills/cicero-bigbrain/SKILL.md](./skills/cicero-bigbrain/SKILL.md).
+- **`cicero-reminders`** is **live**. Backed by the `apple-reminders` MCP (FradSer, EventKit) — `reminders_tasks`, `reminders_lists`, `reminders_subtasks`. Writes to three shared lists: Honeydew, Groceries, Garden. No tags, no assign-to-person, no flags — those are Apple-side limits documented in [skills/cicero-reminders/SKILL.md](./skills/cicero-reminders/SKILL.md).
+- **`cicero-notes`** is **live**. Backed by `lib/notes_mcp.py` (AppleScript). Writes inside the shared `Cicero` Notes folder only — `list_notes`, `get_note`, `create_note`, `append_to_note`. No tags. See [skills/cicero-notes/SKILL.md](./skills/cicero-notes/SKILL.md).
 - **`cicero-health`** is still a stub; the health-data ingestion workstream is upcoming.
 
 ## Heartbeats

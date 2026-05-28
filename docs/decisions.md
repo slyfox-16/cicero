@@ -56,6 +56,22 @@ Saturn hosts other services (MLflow, Postgres, Figma, Dagster). Clean separation
 
 ---
 
+## Apple Reminders + Notes integration (2026-05)
+
+**Decision:** Cicero writes to three pre-shared Apple Reminders lists (Honeydew, Groceries, Garden) and one pre-shared Apple Notes folder (Cicero), all owned by Carlos. Honeydew/Groceries/Cicero-folder are shared with `cicero.ortega@icloud.com` and Sarah; Garden is shared with Cicero only (Carlos's solo list). Reminders backed by FradSer's [`mcp-server-apple-events`](https://github.com/FradSer/mcp-server-apple-events) pinned at 1.4.0 (EventKit). Notes backed by a thin local AppleScript wrapper (`lib/notes_mcp.py`). Cicero does not assign reminders or flag them — both are UI-only Apple features that EventKit and the current Shortcuts actions don't expose; Carlos and Sarah handle assignment manually on their phones.
+
+**Why this MCP for Reminders.** Surveyed `mggrim/apple-reminders-mcp-server`, `supermemoryai/apple-mcp`, `dbmcco/apple-reminders-mcp`, `shadowfax92/apple-reminders-mcp`, `mikakoivisto/reminders-mcp`, and `steipete/remindctl`. FradSer wins on feature breadth — subtasks, location geofences, recurrence, priority, notes body, tags all in one server via EventKit. The others are either narrower (`remindctl` lacks notes body, priority, subtasks) or shell out via AppleScript (slower, brittler).
+
+**Why a custom Notes MCP instead of `memo` or another wrapper.** `memo` is a thin AppleScript wrapper that adds a third-party CLI dependency for no real expressivity gain, and it cannot edit notes with images/attachments. Writing 100 lines of `osascript` ourselves keeps the dependency surface clean and matches the existing `lib/*_mcp.py` pattern.
+
+**Why no Shortcut at all.** Considered using one Apple Shortcut to fill the EventKit assignment gap. Verified on minerva's macOS that neither the "New Reminder" nor "Edit Reminder" Shortcuts actions expose the Assignee field, so the Shortcut path doesn't actually unlock the capability. Manual authoring of a Shortcut that doesn't work is worse than no Shortcut. Dropped. Carlos prefers manual assignment over a title-prefix workaround, so we ship without it. Revisit if a future macOS update adds Assignee to the Shortcut actions.
+
+**Tags dropped from both Reminders and Notes (2026-05-27).** Initial design assumed Apple's UI hashtag auto-parsing would carry over to programmatic writes. Empirically it does not. EventKit-created reminders show `#whatever` as plain title text, never as a tag chip. AppleScript-created notes store the hashtag correctly but Notes' tag parser only fires on user edit events — so the tag stays inert until the user opens the note and types. Tried the trailing-space-plus-empty-paragraph workaround for Notes; confirmed ineffective on minerva's macOS. Cicero now writes no tags anywhere. Use lists, due dates, priority, and prose for categorization. Tracked under "Reminders + Notes — open items" in `docs/roadmap.md` for revisit when Apple exposes a real API or when a Shortcuts-based note-create path is worth the manual authoring.
+
+**Tradeoffs accepted.** (a) Sections inside a Reminders list are not exposed by EventKit — categorization happens via list choice. (b) Programmatic note sharing is not exposed by AppleScript — Carlos pre-shares the folder once, manually. (c) Smart folders in Notes cannot be shared — each person sets up their own filter views on their own phone, one-time. (d) Tags don't activate via either programmatic path; see above. None of these are blockers; they are surface constraints Apple has chosen.
+
+---
+
 ## Historical
 
 ### qwen3:8b as primary model — superseded

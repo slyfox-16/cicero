@@ -232,10 +232,17 @@ log "venv python: $("$VENV_PY" --version)"
 log "registering MCP servers"
 MEMORY_MCP_JSON="{\"command\":\"$VENV_PY\",\"args\":[\"$REPO_ROOT/lib/memory_mcp.py\"]}"
 BRAIN_MCP_JSON="{\"command\":\"$VENV_PY\",\"args\":[\"$REPO_ROOT/lib/brain_mcp.py\"]}"
+NOTES_MCP_JSON="{\"command\":\"$VENV_PY\",\"args\":[\"$REPO_ROOT/lib/notes_mcp.py\"]}"
+# FradSer's apple-reminders MCP — pinned for stability
+APPLE_REMINDERS_MCP_JSON='{"command":"npx","args":["-y","mcp-server-apple-events@1.4.0"]}'
 openclaw mcp set cicero-memory "$MEMORY_MCP_JSON" >/dev/null 2>&1 \
   || warn "failed to register cicero-memory MCP"
 openclaw mcp set cicero-brain "$BRAIN_MCP_JSON" >/dev/null 2>&1 \
   || warn "failed to register cicero-brain MCP"
+openclaw mcp set apple-reminders "$APPLE_REMINDERS_MCP_JSON" >/dev/null 2>&1 \
+  || warn "failed to register apple-reminders MCP"
+openclaw mcp set cicero-notes "$NOTES_MCP_JSON" >/dev/null 2>&1 \
+  || warn "failed to register cicero-notes MCP"
 
 # 10. Install / refresh launchd plist for the gateway
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
@@ -350,5 +357,15 @@ if command -v imsg >/dev/null 2>&1; then
   log "  2. System Settings > Privacy & Security > Automation — allow Messages.app control (prompted on first send)"
   log ""
 fi
+
+# 16. Manual setup reminders for Reminders + Notes (one-time per machine)
+log ""
+log "Reminders + Notes integration: one-time manual setup required (see docs/operations.md):"
+log "  1. On Carlos's iPhone: share 'Honeydew', 'Groceries', 'Garden' Reminders lists with cicero.ortega@icloud.com"
+log "  2. On Carlos's iPhone: create Notes folder 'Cicero', share with cicero.ortega@icloud.com and Sarah"
+log "  3. On minerva: open Reminders.app and Notes.app once to accept share invites"
+log "  4. System Settings > Privacy & Security > Reminders — enable for $(command -v node) (and Terminal for testing)"
+log "  5. System Settings > Privacy & Security > Automation — enable Notes.app control"
+log ""
 
 log "done."

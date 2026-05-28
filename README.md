@@ -59,6 +59,7 @@ cd ~/cicero
 You will need:
 - An Anthropic API key in `~/.config/anthropic/api_key` (mode 0600) or the `ANTHROPIC_API_KEY` env var.
 - Full Disk Access granted to `node` and `imsg` for iMessage delivery (one-time, in System Settings → Privacy & Security).
+- For the Reminders + Notes skills: the shared lists (Honeydew, Groceries, Garden) and the `Cicero` Notes folder invited to `cicero.ortega@icloud.com` and accepted on minerva, plus Reminders + Automation permissions granted to `node`. Step-by-step in `docs/operations.md`.
 
 ---
 
@@ -67,6 +68,8 @@ You will need:
 OpenClaw reads `workspace/` at session start and injects `SOUL.md`, `AGENTS.md`, `IDENTITY.md`, `USER.md`, and `TOOLS.md` into the system prompt. The workspace is symlinked from `~/.openclaw/workspace` to `~/cicero/workspace`, so the repo is the source of truth — edits are live.
 
 Inference goes through OpenClaw's native `@openclaw/anthropic-provider`. Skills (`workspace/skills/`) are auto-discovered. Cicero's long-term memory is a local Chroma vector store seeded from `docs/archive/cicero-backstory.md` and queried via the `cicero-memory` MCP tool.
+
+Cicero acts in the Apple ecosystem through two skills: `cicero-reminders` (CRUD on the shared Honeydew, Groceries, and Garden reminder lists via FradSer's `mcp-server-apple-events` over EventKit) and `cicero-notes` (read/create/append in the shared `Cicero` Notes folder via `lib/notes_mcp.py`). Setup details are in `docs/operations.md`.
 
 ---
 

@@ -27,6 +27,7 @@ The data plane below the brain — Chroma, session logs, iMessage state, MCP ser
 | Chroma: loopback-bound | `127.0.0.1:8000` only. Telemetry off. |
 | launchd: KeepAlive | Gateway and Chroma restart automatically on crash. |
 | Workspace: git-versioned | All workspace files in this repo. No secrets in workspace files. |
+| Third-party MCP pinned | `apple-reminders` runs FradSer's `mcp-server-apple-events` at a pinned version (`1.4.0`) via `npx`. Treated as community code — re-audit on version bump (see Rule 1). |
 
 ---
 
@@ -77,7 +78,7 @@ Skills execute with OpenClaw's permissions — your user account on minerva. A m
 A breaking change in the runtime, workspace format, or skill SDK warrants deliberate testing, not silent background pulls. `setup.sh` should not auto-update OpenClaw in production.
 
 **3. Skills that act on external systems require stricter review.**
-Read-only skills (memory search, future health lookup) have limited blast radius. Skills that send messages, modify files, interact with home automation, or post to any external service are actuators — same scrutiny as production deployments.
+Read-only skills (memory search, future health lookup) have limited blast radius. Skills that send messages, modify files, interact with home automation, or post to any external service are actuators — same scrutiny as production deployments. Currently actuating: `cicero-reminders` and `cicero-notes` write to shared iCloud surfaces visible to Sarah, plus the iMessage send path. A prompt-injected request that causes Cicero to add nonsense to the Groceries list or save a junk note in the shared folder is the realistic worst case — annoying, not catastrophic, and reversible by hand. Worth re-evaluating before granting write access to anything with real-world side effects (Home, Calendar invites to third parties, financial pipelines).
 
 **4. The gateway is loopback. Keep it that way.**
 `openclaw.json` sets `gateway.bind: loopback`. The gateway token is a second layer. Exposing the gateway to LAN or internet without VPN/mTLS is a material risk increase. Use Tailscale if remote access is needed.

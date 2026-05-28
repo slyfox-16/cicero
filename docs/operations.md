@@ -149,6 +149,55 @@ cicero gateway restart
 
 ---
 
+## Apple Reminders + Notes integration
+
+Cicero writes to two shared Apple Reminders lists (Honeydew, Groceries) and one shared Apple Notes folder (Cicero). All three are owned by Carlos and shared with `cicero.ortega@icloud.com`.
+
+### One-time manual setup
+
+Done by Carlos on his iPhone (or any of his devices signed into iCloud):
+
+1. **Reminders** → open Honeydew → tap the share icon → invite `cicero.ortega@icloud.com` with "Can make changes". Repeat for Groceries (also shared with Sarah) and Garden (Carlos + Cicero only — do not invite Sarah).
+2. **Notes** → create a folder named exactly `Cicero` → share it with `cicero.ortega@icloud.com` *and* Sarah with "Can make changes". Sarah must accept her invite too.
+
+Done on minerva (Cicero's user account, must be signed into iCloud as `cicero.ortega@icloud.com`):
+
+3. Open **Reminders.app** once. Accept both shared-list invites.
+4. Open **Notes.app** once. Accept the shared-folder invite.
+5. System Settings → Privacy & Security → **Reminders** → enable the toggle for `node` (the OpenClaw gateway runtime) and Terminal.
+6. System Settings → Privacy & Security → **Automation** → expand Terminal and `node` and enable Notes.app.
+
+### Assigning reminders to a person — manual
+
+Apple Reminders supports assigning shared-list items to a specific person (Carlos or Sarah) with native badges and notifications, but neither EventKit nor the Shortcuts "New Reminder" / "Edit Reminder" actions expose the Assignee field as of the macOS version on minerva. Cicero therefore does not assign reminders. When you want one assigned, do it manually on your phone after Cicero creates it — Apple's UI assignee picker is one tap.
+
+### Smart folders (each person, on their own phone)
+
+Carlos and Sarah each set these up once on their iPhone. They don't share — they're personal lenses.
+
+- Notes → File → New Smart Folder → filter by **Tag** → e.g. `#recipe`. Repeat for `#travel`, `#reference`, whatever each person wants.
+
+### Operating
+
+```bash
+openclaw mcp list                                    # confirm apple-reminders, cicero-notes registered
+openclaw mcp show apple-reminders
+cicero ask "list the reminders on Groceries"           # smoke test EventKit reads
+cicero ask "add milk, eggs, and butter to Groceries"   # smoke test EventKit writes
+cicero ask "save a note titled 'Test' with the body 'hello'"   # smoke test Notes
+```
+
+### Common failure modes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `apple-reminders` MCP errors `permission denied` | Reminders permission not granted to node | System Settings → Privacy & Security → Reminders → enable node |
+| `cicero-notes` errors `Notes got an error: Can't get folder "Cicero"` | Folder not yet accepted on minerva or wrong name | Open Notes.app on minerva, accept invite, confirm folder name is exactly `Cicero` |
+| New note doesn't appear on Sarah's phone | Note was created outside the shared folder | Confirm the `folder` arg defaulted to `"Cicero"`; only that folder is shared |
+| `append_to_note` mangles a note | Note contains images/attachments — AppleScript strips them | Create a follow-up note instead; never append to media notes |
+
+---
+
 ## Chroma vector memory
 
 The `cicero-memory` skill is backed by a local Chroma server holding semantically-chunked biographical and operational material.

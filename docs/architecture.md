@@ -41,6 +41,15 @@ imsg CLI (/opt/homebrew/bin/imsg)                                       │
                                                                     │       ├── big_brain    → Anthropic SDK → Sonnet 4.6
                                                                     │       └── galaxy_brain → Anthropic SDK → Opus 4.7
                                                                     │
+                                                                    ├── cicero-reminders → apple-reminders MCP (stdio)
+                                                                    │       └── mcp-server-apple-events (FradSer, npx, pinned)
+                                                                    │               └── EventKit → shared Reminders lists
+                                                                    │                   (Honeydew, Groceries, Garden)
+                                                                    │
+                                                                    ├── cicero-notes → notes_mcp.py (stdio)
+                                                                    │       └── osascript → Notes.app
+                                                                    │           → shared "Cicero" folder
+                                                                    │
                                                                     └── cicero-health   [stub — not wired]
 
 Chroma server (http://127.0.0.1:8000, loopback only)
@@ -82,12 +91,15 @@ cicero/
 │   └── skills/                      Workspace skills, auto-discovered by OpenClaw.
 │       ├── cicero-memory/           Routes to query_cicero_memory_tool MCP.
 │       ├── cicero-bigbrain/         Routes to big_brain / galaxy_brain MCPs.
+│       ├── cicero-reminders/        Routes to apple-reminders MCP (FradSer, EventKit).
+│       ├── cicero-notes/            Routes to notes_mcp.py (AppleScript / shared Notes folder).
 │       └── cicero-health/           Stub.
 │
 ├── lib/                             MCP servers + retrieval library.
 │   ├── memory_query.py              Semantic search over Chroma.
 │   ├── memory_mcp.py                MCP exposing query_cicero_memory_tool.
 │   ├── brain_mcp.py                 MCP exposing big_brain + galaxy_brain (Anthropic SDK).
+│   ├── notes_mcp.py                 MCP exposing list/get/create/append for Apple Notes (osascript).
 │   └── retrieval_middleware.py      Auto-inject memory context into `cicero ask` calls.
 │
 ├── scripts/
@@ -138,6 +150,7 @@ cicero/
 ## Known limitations
 
 - **Skill routing.** `cicero-health` is still a stub; Postgres + Apple Health pipeline pending.
+- **Reminders + Notes — Apple gaps.** EventKit doesn't expose assignee, flags, or sections; Apple Notes' hashtag parser doesn't fire on AppleScript-written content. Cicero ships without tags, assignment, or flag support — see `docs/roadmap.md` "Reminders + Notes — open items" for the full list and possible future paths.
 - **Single agent.** Only `main` is configured.
 - **No `~/.openclaw` backup.** Session history and credentials live outside the repo. The workspace itself is git-versioned.
 - **iMessage basic mode only.** Reactions, edits, unsend, and threaded replies require SIP off — deliberately not done.

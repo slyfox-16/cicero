@@ -8,6 +8,7 @@ Idempotent bootstrap for Cicero on macOS (Apple Silicon). Active deploy path.
 - An Anthropic API key. The script will fail with a clear message if it can't find one. Put it at either:
   - `~/.config/anthropic/api_key` (mode 0600), or
   - the `ANTHROPIC_API_KEY` env var (also fine, but the file is preferred so the brain MCP can read it without you re-sourcing your shell).
+- For Reminders + Notes: the shared lists (Honeydew, Groceries, Garden) and the `Cicero` Notes folder must be invited to `cicero.ortega@icloud.com` and accepted on minerva *before* the MCPs are useful. Reminders + Automation permissions for `node` must be granted in System Settings → Privacy & Security. Full walkthrough in `docs/operations.md` under "Apple Reminders + Notes integration".
 
 ## Install
 
@@ -27,7 +28,10 @@ If `~/.openclaw/openclaw.json` is missing, the script will run `openclaw onboard
 - Pins `agents.defaults.model.primary` to `anthropic/claude-haiku-4-5`
 - Enables the DuckDuckGo and `@openclaw/imessage` plugins
 - Symlinks `~/.openclaw/workspace` → `<repo>/workspace`
-- Registers MCP servers: `cicero-memory` (Chroma) and `cicero-brain` (big_brain / galaxy_brain)
+- Registers MCP servers:
+  - `cicero-memory` (Chroma) and `cicero-brain` (big_brain / galaxy_brain)
+  - `apple-reminders` (FradSer's `mcp-server-apple-events`, pinned, via `npx`)
+  - `cicero-notes` (local AppleScript wrapper for the shared Notes folder)
 - Installs launchd units with a freshly generated gateway token:
   - `ai.openclaw.gateway` — the gateway
   - `ai.cicero.chroma` — the Chroma server
