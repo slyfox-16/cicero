@@ -8,11 +8,72 @@ Categorized backlog. Three categories:
 
 Completed items are removed from this doc once they ship; they live in their relevant ADR (`docs/decisions.md`), the architecture overview (`docs/architecture.md`), or operations runbook (`docs/operations.md`). The roadmap is forward-looking only.
 
+**Current status:** Cicero is hibernated as of 2026-05-30. minerva decommissioned. Future host: Saturn (Linux). The Saturn migration section below must be completed before any other infrastructure work resumes.
+
+---
+
+## Saturn migration (deferred — do this first on revival)
+
+minerva is gone. Before Cicero can run on Saturn, the following must be built. None of this is
+designed in detail yet — do that work when revival is imminent.
+
+### Primary channel replacement
+
+iMessage has no Linux equivalent. Pick one and implement before anything else — without a channel,
+Cicero has no input. Options in rough order of preference:
+
+- **Matrix** (self-hostable, bridges to iMessage/Signal/SMS via various bridges, open protocol)
+- **Signal-CLI** (end-to-end encrypted, open source, requires a dedicated phone number)
+- **Telegram bot** (easiest to implement, hosted infrastructure, not self-sovereign)
+- **Webhook / simple HTTP** (lowest friction for dev use; no mobile UX)
+
+### Linux service management
+
+Replace launchd with systemd user services:
+- `~/.config/systemd/user/cicero-gateway.service` — OpenClaw gateway
+- `~/.config/systemd/user/cicero-chroma.service` — Chroma vector store
+- systemd timer for token rotation (replaces `ai.cicero.token-rotate.plist`)
+
+### Linux deploy script
+
+Write `deploy/linux/setup.sh` mirroring `deploy/mac/setup.sh`. Reference the Mac script as the
+authoritative spec for what it needs to do:
+- Install deps via apt/dnf/pacman instead of Homebrew
+- Set up systemd units instead of launchd plists
+- Register MCPs, create workspace symlink, start services
+- No `imsg`, no macOS permissions steps
+
+### cicero-reminders replacement
+
+EventKit is macOS-only. Evaluate:
+- Todoist API (hosted; good mobile apps Carlos and Sarah already use)
+- Nextcloud Tasks / CalDAV (self-hosted; fits self-sovereignty ethos)
+- Match the three-list model (Honeydew, Groceries, Garden) as closely as possible
+
+### cicero-notes replacement
+
+AppleScript is macOS-only. Evaluate:
+- Nextcloud Notes (self-hosted; pairs with Tasks)
+- Joplin server (self-hosted; markdown-native)
+- Keep the same "Cicero" shared folder model where possible
+
+### Memory re-ingestion
+
+On first Saturn boot, run `scripts/ingest_memory.py` against a fresh Chroma instance to rebuild
+long-term memory from `docs/archive/cicero-backstory.md`. No data was lost — the corpus is in git.
+
+### brain_mcp.py log path (trivial)
+
+Change `LOG_PATH` in `lib/brain_mcp.py` from `Path.home() / "Library" / "Logs"` to
+`Path.home() / ".local" / "share" / "cicero" / "logs"`.
+
 ---
 
 ## Infrastructure
 
 ### Multi-user identity & contact-gated allowlist
+
+**Depends on Saturn migration (primary channel replacement).**
 
 Cicero currently treats every inbound message as "from Carlos" — the iMessage allowlist contains only `carlos.m.ortega16@gmail.com`. Sarah and any future users have no first-class place in the system.
 
@@ -32,6 +93,8 @@ Unblocks: short-term memory (needs a user key to partition by), proactive messag
 ---
 
 ### Short-term memory (24-hour conversational context, per user)
+
+**Depends on Saturn migration (primary channel) and multi-user identity.**
 
 Cicero currently has no memory of what he said earlier in a conversation. Every iMessage and CLI call starts cold. This kills follow-up questions ("add the recipe ingredients to groceries" after a recipe lookup), and it makes confirm-before-write impossible.
 
@@ -79,11 +142,15 @@ Read both Carlos's iCloud calendars and Google Calendar (personal + work, if wor
 
 ### Time-based proactive nudges
 
+**Depends on Saturn migration (primary channel) and multi-user identity.**
+
 Cicero today only acts when messaged. A scheduled loop scans upcoming reminders and DMs the assignee an hour before due. Depends on multi-user identity (to know who to message) and is a small extension on top of the iMessage send path that already works.
 
 ---
 
 ### Proactive messages and scheduled reports
+
+**Depends on Saturn migration (primary channel) and multi-user identity.**
 
 Daily / weekly digests Cicero pushes out unprompted — morning brief, weekly grocery roundup, financial pulse once Postgres lands, etc. Same dependency on multi-user identity for routing.
 
@@ -119,16 +186,16 @@ Low priority — list separation, priority, and due dates cover most categorizat
 
 AppleScript-written `#tag` content stores correctly but Notes' tag parser only fires on user edit events, so tags stay inert until the user opens the note and types. Trailing-space-plus-empty-paragraph workaround was tried and confirmed ineffective. Possible paths:
 
-- Route note creation through a Shortcut with Apple's dedicated "Add Tags to Notes" action (requires manual Shortcut authoring on minerva).
+- Route note creation through a Shortcut with Apple's dedicated "Add Tags to Notes" action (requires manual Shortcut authoring on a Mac).
 - Simulate a keystroke via `osascript` → System Events after creation (hacky).
 
-Revisit when a concrete use case justifies the manual setup or the keystroke trick.
+Moot if cicero-notes is replaced with a non-Apple backend on Saturn. Revisit only on a future Mac revival.
 
 ---
 
 ### Assign-to-person on shared reminders
 
-Not exposed by EventKit or by the New / Edit Reminder Shortcut actions on minerva's current macOS. Carlos and Sarah assign manually on their phones today. Revisit if a future macOS update adds Assignee to a Shortcut action.
+Not exposed by EventKit or by the New / Edit Reminder Shortcut actions on macOS. Carlos and Sarah assign manually on their phones today. Revisit if a future macOS update adds Assignee to a Shortcut action.
 
 ---
 
@@ -144,6 +211,8 @@ Not exposed by EventKit. Use lists themselves as the primary categorization for 
 
 ---
 
-### Confirm-before-write on iMessage
+### Confirm-before-write on channel
+
+**Depends on Saturn migration (primary channel) and short-term memory.**
 
 Today Cicero writes immediately and recaps. A confirm step ("Add milk, eggs, butter to Groceries — yes?") requires Cicero to remember the pending write between the two iMessage pings. **Depends on** the short-term memory infrastructure above. Once that lands, this becomes a small SKILL.md change.

@@ -1,8 +1,20 @@
 # CLAUDE.md — Cicero Repo
 
-This repo is Cicero's configuration — personality, workspace files, skills, deploy scripts, and the MCP servers that back them. It is not Cicero itself. The runtime is OpenClaw on minerva, with inference served by the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`. Edits here are live (workspace is symlinked into the running agent).
+This repo is Cicero's configuration — personality, workspace files, skills, deploy scripts, and the MCP servers that back them. It is not Cicero itself. The runtime is OpenClaw, with inference served by the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`.
 
-**Primary channel:** iMessage at `cicero.ortega@icloud.com`. CLI (`cicero chat` / `cicero ask`) is for development.
+---
+
+## Current Status
+
+**Cicero is hibernated as of 2026-05-30.** minerva (the Mac the system ran on) has been
+decommissioned and returned to Apple. The repo is the preserved artifact.
+
+**Reviving Cicero:** Start with `docs/hibernation.md` — it covers what was and wasn't preserved,
+a pre-sell checklist, platform porting notes, and step-by-step revival for both Mac and Linux.
+
+**Future host:** Saturn (Linux server), timing TBD. The Mac-specific skills (iMessage, Reminders,
+Notes) will need Linux equivalents before Cicero is fully functional on Saturn. See
+`docs/roadmap.md` → "Saturn migration" for the full backlog.
 
 ---
 
@@ -45,7 +57,7 @@ cicero/
 └── docs/
     ├── architecture.md   Current architecture and repo layout.
     ├── decisions.md      ADRs.
-    ├── operations.md     Runbook for minerva.
+    ├── operations.md     Runbook (Mac/minerva last known state).
     ├── roadmap.md        Upcoming workstreams.
     ├── security.md       Operational discipline.
     ├── scope.md          What Cicero is and is not.
@@ -82,13 +94,13 @@ These are not theoretical principles. Each cost an avoidable round-trip and is h
 
 2. **For macOS UI walkthroughs (Shortcuts, System Settings, Reminders.app), have Carlos enumerate what he sees before authoring the steps.** Apple's UI varies enough across macOS versions that detailed click-by-click instructions written from web articles will be wrong. Ask "open Shortcuts.app, click +, search 'reminder', tell me the action names you see" — then write the walkthrough around what's actually there.
 
-3. **Vendor docs and blog snippets are not tested behavior.** Especially around Apple integrations: hashtag parsing, smart-folder sharing, EventKit field exposure are all places where the public docs and the actual programmatic behavior diverge. Run a smoke test on minerva before designing a feature around an assumed capability.
+3. **Vendor docs and blog snippets are not tested behavior.** Especially around Apple integrations: hashtag parsing, smart-folder sharing, EventKit field exposure are all places where the public docs and the actual programmatic behavior diverge. Run a smoke test on the target machine before designing a feature around an assumed capability.
 
 4. **Verify the exact names of pre-existing things rather than assuming.** Reminders list names, Notes folder names, Contact display names — all human-set strings that don't match your guess. Ask Carlos, or have Cicero enumerate (`reminders_lists`, `list_notes`), before writing the first line of code that references them.
 
 5. **Research community + vendor + GitHub before designing a new integration.** Apple Community forums, the relevant MCP server's GitHub issues, Reddit, and search results for "EventKit / AppleScript / Shortcuts + the capability you want." Ten minutes here surfaces known limitations and existing patterns before you spend an hour designing around capabilities that don't exist.
 
-6. **Match caution to reversibility.** On minerva (Carlos's own machine, idempotent setup script, local launchd), running `./deploy/mac/setup.sh` and `launchctl kickstart` is zero-blast-radius — just do it. Reserve "ask before acting" for things that hit shared state (git push, gh pr, modifying the Anthropic console, deleting data). Carlos has explicit feedback on this: don't make him ask you to deploy on his own dev box.
+6. **Match caution to reversibility.** On Carlos's own machine (idempotent setup script, local service manager), running the setup script and restarting the gateway is zero-blast-radius — just do it. Reserve "ask before acting" for things that hit shared state (git push, gh pr, modifying the Anthropic console, deleting data). Carlos has explicit feedback on this: don't make him ask you to deploy on his own dev box.
 
 7. **Verify per claim, not per batch.** After each piece of a multi-part change, run one `cicero ask` smoke test that exercises it. Don't claim a feature works until you've actually seen it work end-to-end (read AND write paths). A single bug surfacing across three rounds of user corrections is three rounds you should have caught yourself with three 30-second tests.
 
@@ -162,7 +174,7 @@ If `skipBootstrap: true` is present, remove it (`setup.sh` does this automatical
 
 ---
 
-## Key paths on minerva
+## Key paths (last known on minerva)
 
 | Path | What |
 |---|---|

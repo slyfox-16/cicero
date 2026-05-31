@@ -1,6 +1,8 @@
 # Operations — Cicero on minerva
 
-Runbook for operating Cicero on minerva. Not a development guide — see CLAUDE.md.
+**Status: minerva decommissioned 2026-05-30. This runbook is preserved as the reference for Mac revival. For revival steps and platform porting, see `docs/hibernation.md` first.**
+
+Runbook for operating Cicero on a Mac. Not a development guide — see CLAUDE.md.
 
 ---
 
@@ -160,7 +162,7 @@ Done by Carlos on his iPhone (or any of his devices signed into iCloud):
 1. **Reminders** → open Honeydew → tap the share icon → invite `cicero.ortega@icloud.com` with "Can make changes". Repeat for Groceries (also shared with Sarah) and Garden (Carlos + Cicero only — do not invite Sarah).
 2. **Notes** → create a folder named exactly `Cicero` → share it with `cicero.ortega@icloud.com` *and* Sarah with "Can make changes". Sarah must accept her invite too.
 
-Done on minerva (Cicero's user account, must be signed into iCloud as `cicero.ortega@icloud.com`):
+Done on the Mac (Cicero's user account, must be signed into iCloud as `cicero.ortega@icloud.com`):
 
 3. Open **Reminders.app** once. Accept both shared-list invites.
 4. Open **Notes.app** once. Accept the shared-folder invite.
@@ -192,7 +194,7 @@ cicero ask "save a note titled 'Test' with the body 'hello'"   # smoke test Note
 | Symptom | Cause | Fix |
 |---|---|---|
 | `apple-reminders` MCP errors `permission denied` | Reminders permission not granted to node | System Settings → Privacy & Security → Reminders → enable node |
-| `cicero-notes` errors `Notes got an error: Can't get folder "Cicero"` | Folder not yet accepted on minerva or wrong name | Open Notes.app on minerva, accept invite, confirm folder name is exactly `Cicero` |
+| `cicero-notes` errors `Notes got an error: Can't get folder "Cicero"` | Folder not yet accepted or wrong name | Open Notes.app on the Mac, accept invite, confirm folder name is exactly `Cicero` |
 | New note doesn't appear on Sarah's phone | Note was created outside the shared folder | Confirm the `folder` arg defaulted to `"Cicero"`; only that folder is shared |
 | `append_to_note` mangles a note | Note contains images/attachments — AppleScript strips them | Create a follow-up note instead; never append to media notes |
 

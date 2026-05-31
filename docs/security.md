@@ -1,6 +1,6 @@
 # Security
 
-Operational discipline for running Cicero on minerva.
+Operational discipline for running Cicero. Last deployed on minerva (decommissioned 2026-05-30). Principles apply on any host.
 
 ---
 
@@ -10,7 +10,7 @@ Cicero runs an LLM over content that arrives from external surfaces — iMessage
 
 Cicero's brain is now hosted by Anthropic. The data that crosses the API boundary is: user message text, system prompt (workspace files), tool definitions, and tool outputs. Tool outputs include Chroma retrieval results (Cicero's biographical material) and may include data from future skills (health, financial, calendar). Treat anything that flows into a tool result as something the model sees.
 
-The data plane below the brain — Chroma, session logs, iMessage state, MCP servers — stays on minerva. Nothing in the repo or workspace should contain secrets.
+The data plane below the brain — Chroma, session logs, channel state, MCP servers — stays on the host machine. Nothing in the repo or workspace should contain secrets.
 
 ---
 
@@ -18,7 +18,7 @@ The data plane below the brain — Chroma, session logs, iMessage state, MCP ser
 
 | Control | What it does |
 |---|---|
-| Tailscale | minerva, Jupiter, and Saturn are on a private Tailscale network. Remote access routes through Tailscale — no public internet exposure. |
+| Tailscale | Saturn and other hosts are on a private Tailscale network. Remote access routes through Tailscale — no public internet exposure. minerva has been decommissioned. |
 | Gateway: loopback-bound | The OpenClaw gateway listens on `127.0.0.1:18789` only. Not reachable from LAN or internet. |
 | Gateway: token auth | Every gateway request must include the bearer token. 48 hex chars (192 bits). |
 | Gateway: token rotation | Rotated automatically every 6 months by `ai.cicero.token-rotate` (Jan 1, Jul 1 at 03:00 UTC). |
@@ -72,7 +72,7 @@ tail ~/Library/Logs/cicero-token-rotate.out.log
 ## Rules
 
 **1. Do not install community skills without reading the source.**
-Skills execute with OpenClaw's permissions — your user account on minerva. A malicious or careless skill can read files, make network calls, or send messages. Treat ClawHub like untrusted code.
+Skills execute with OpenClaw's permissions — your user account on the host machine. A malicious or careless skill can read files, make network calls, or send messages. Treat ClawHub like untrusted code.
 
 **2. Pin OpenClaw versions. Review release notes before upgrading.**
 A breaking change in the runtime, workspace format, or skill SDK warrants deliberate testing, not silent background pulls. `setup.sh` should not auto-update OpenClaw in production.

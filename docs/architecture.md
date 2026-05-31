@@ -1,6 +1,12 @@
 # Cicero Architecture
 
-Cicero is a personal AI assistant running as an OpenClaw agent on minerva (Mac mini, Apple Silicon). The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the channel layer, gateway, session loop, and skill runtime. Inference is served by the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`.
+**Status: hibernated as of 2026-05-30.** minerva has been decommissioned. This document reflects the last known live configuration. See `docs/hibernation.md` for revival instructions and platform porting notes.
+
+---
+
+Cicero is a personal AI assistant running as an OpenClaw agent. The repo versions the workspace, skills, and deploy scripts. OpenClaw provides the channel layer, gateway, session loop, and skill runtime. Inference is served by the Anthropic API via OpenClaw's native `@openclaw/anthropic-provider`.
+
+Last deployed on: minerva (Mac mini → MacBook Pro, Apple Silicon).
 
 ---
 
@@ -132,9 +138,12 @@ cicero/
 
 ## Deploy
 
-| Component | minerva |
+Last known live configuration (minerva, decommissioned 2026-05-30):
+
+| Component | minerva (last known state) |
 |---|---|
-| Machine | Mac mini, Apple Silicon |
+| Machine | MacBook Pro, Apple Silicon |
+| Status | **decommissioned** |
 | Service manager | launchd user agents |
 | Gateway token | env var in launchd plist; rotated semi-annually |
 | Primary channel | iMessage (`cicero.ortega@icloud.com`) |
@@ -144,6 +153,25 @@ cicero/
 | Default model | `claude-haiku-4-5` |
 | Escalation models | `claude-sonnet-4-6`, `claude-opus-4-7` (via brain MCP) |
 | Setup script | `deploy/mac/setup.sh` |
+
+---
+
+## Platform compatibility
+
+| Component | Mac | Linux |
+|---|---|---|
+| iMessage channel | ✅ `@openclaw/imessage` + `imsg` CLI | ❌ Apple-only — needs replacement channel |
+| cicero-reminders | ✅ EventKit via `mcp-server-apple-events` | ❌ Apple-only — needs Todoist/CalDAV/etc. |
+| cicero-notes | ✅ AppleScript via `lib/notes_mcp.py` | ❌ Apple-only — needs Nextcloud Notes/Joplin/etc. |
+| cicero-memory | ✅ | ✅ Chroma is portable — no changes needed |
+| cicero-bigbrain | ✅ | ✅ Anthropic API — no changes needed |
+| cicero-health | stub | stub — backend not yet built |
+| brain_mcp.py log path | `~/Library/Logs/` | change to `~/.local/share/cicero/logs/` (one-line fix) |
+| Chroma server | launchd | systemd user service |
+| OpenClaw gateway | launchd | systemd user service |
+| Deploy script | `deploy/mac/setup.sh` (complete) | `deploy/linux/setup.sh` (does not exist yet) |
+
+See `docs/hibernation.md` for the full Linux revival plan.
 
 ---
 
